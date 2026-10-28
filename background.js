@@ -178,7 +178,7 @@ async function callGeminiAPI(apiKey, prompt, systemInstruction, preferredModel) 
             if (response.status === 400 && lastErrorMsg.toLowerCase().includes('api key')) {
                 return {
                     error: {
-                        message: 'Tu API Key de Google Gemini no es válida. Verifica que empiece por AIza...'
+                        message: 'Tu API Key de Google Gemini no es válida. Verifica que empiece por AIza…'
                     }
                 };
             }
@@ -258,7 +258,7 @@ async function callGroqAPI(apiKey, prompt, systemInstruction, preferredModel) {
             if (lastStatus === 401) {
                 return {
                     error: {
-                        message: 'Tu API Key de Groq no es válida. Verifica que empiece por gsk_...'
+                        message: 'Tu API Key de Groq no es válida. Verifica que empiece por gsk_…'
                     }
                 };
             }

@@ -22,7 +22,6 @@ jobs:
           node --check background.js
           node --check parser.js
           node --check uiStuff.js
-          node --check confirmDialog.js
           node --check contentScript.js
           node --check options/options.js
           node -e "JSON.parse(require('fs').readFileSync('manifest.json', 'utf8'));"
@@ -36,9 +35,9 @@ jobs:
             background.js \
             parser.js \
             uiStuff.js \
-            confirmDialog.js \
             contentScript.js \
             content.css \
+            fonts/ \
             icons/ \
             options/
           cp "Asistente-IA-WhatsApp-Pro-v${VERSION}.zip" "Asistente-IA-WhatsApp-Pro.zip"

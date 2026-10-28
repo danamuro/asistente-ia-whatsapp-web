@@ -14,8 +14,8 @@ const OPT_PH_BOLD = {
 
 const PROVIDER_CONFIG = {
     groq: {
-        label: 'Tu API Key Gratuita de Groq Cloud (empieza por gsk_...):',
-        placeholder: 'gsk_...',
+        label: 'Tu API Key Gratuita de Groq Cloud (empieza por gsk_…):',
+        placeholder: 'gsk_…',
         helpHtml: `
             <strong>${OPT_PH_BOLD.lightning}100% GRATIS y Ultrarrápido (Sin tarjeta):</strong><br>
             1. Entra a <a href="https://console.groq.com/keys" target="_blank" style="font-weight:700; color:#065f46; text-decoration:underline;">Groq Console (console.groq.com/keys)</a> e inicia sesión con Google.<br>
@@ -30,8 +30,8 @@ const PROVIDER_CONFIG = {
         ]
     },
     gemini: {
-        label: 'Tu API Key Gratuita de Google Gemini (empieza por AIza...):',
-        placeholder: 'AIzaSy...',
+        label: 'Tu API Key Gratuita de Google Gemini (empieza por AIza…):',
+        placeholder: 'AIzaSy…',
         helpHtml: `
             <strong>${OPT_PH_BOLD.sparkle}100% GRATIS con tu cuenta de Google (Sin tarjeta):</strong><br>
             1. Entra a <a href="https://aistudio.google.com/apikey" target="_blank" style="font-weight:700; color:#065f46; text-decoration:underline;">Google AI Studio (aistudio.google.com/apikey)</a>.<br>
@@ -148,7 +148,7 @@ testApiBtn.addEventListener('click', () => {
     }
 
     testStatusBox.className = 'test-status';
-    testStatusBox.innerHTML = `${OPT_PH_BOLD.spinner}<span>Detectando modelos disponibles y probando conexión...</span>`;
+    testStatusBox.innerHTML = `${OPT_PH_BOLD.spinner}<span>Detectando modelos disponibles y probando conexión…</span>`;
     testApiBtn.disabled = true;
 
     chrome.runtime.sendMessage({
@@ -276,7 +276,7 @@ function initUpdateChecker() {
     checkBtn.addEventListener('click', async () => {
         statusBox.style.display = 'flex';
         statusBox.className = 'update-status';
-        statusBox.innerHTML = `${OPT_PH_BOLD.spinner}<span>Comprobando si hay actualizaciones en GitHub...</span>`;
+        statusBox.innerHTML = `${OPT_PH_BOLD.spinner}<span>Comprobando si hay actualizaciones en GitHub…</span>`;
         checkBtn.disabled = true;
 
         try {

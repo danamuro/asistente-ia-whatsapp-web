@@ -56,7 +56,15 @@ const PH_BOLD_ICONS = {
     ),
     exportUp: phBoldSvg(
         '<polyline points="88 136 128 96 168 136"/><line x1="128" y1="216" x2="128" y2="96"/><path d="M176,184h24a16,16,0,0,0,16-16V56a16,16,0,0,0-16-16H56A16,16,0,0,0,40,56V168a16,16,0,0,0,16,16H80"/>',
-        19
+        15
+    ),
+    caretDown: phBoldSvg(
+        '<polyline points="208 96 128 176 48 96"/>',
+        12
+    ),
+    trash: phBoldSvg(
+        '<line x1="216" y1="56" x2="40" y2="56"/><line x1="104" y1="104" x2="104" y2="168"/><line x1="152" y1="104" x2="152" y2="168"/><path d="M200,56V208a8,8,0,0,1-8,8H64a8,8,0,0,1-8-8V56"/><path d="M168,56V40a16,16,0,0,0-16-16H104A16,16,0,0,0,88,40V56"/>',
+        14
     )
 };
 
@@ -90,7 +98,7 @@ function createGptButton() {
         setBusy(value) {
             if (value) {
                 gptButton.style.opacity = '0.75';
-                gptButton.innerHTML = `${PH_BOLD_ICONS.sparkle}<span>Generando...</span>`;
+                gptButton.innerHTML = `${PH_BOLD_ICONS.sparkle}<span>Generando…</span>`;
             } else {
                 gptButton.style.opacity = '1';
                 gptButton.innerHTML = `${PH_BOLD_ICONS.sparkle}<span>Generar IA</span>`;
@@ -99,18 +107,127 @@ function createGptButton() {
     };
 }
 
+// Componente de selector desplegable personalizado con iconos Phosphor Bold y fuente Figtree
+function createCustomSelect({ title, options, defaultValue, iconMap, align = 'left' }) {
+    const container = document.createElement('div');
+    container.className = 'gpt-wa-custom-select';
+    container.title = title;
+
+    let currentValue = defaultValue || (options[0] && options[0].value);
+
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'gpt-wa-custom-select-trigger';
+
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'gpt-wa-custom-select-label';
+
+    const caretSpan = document.createElement('span');
+    caretSpan.className = 'gpt-wa-select-caret';
+    caretSpan.innerHTML = PH_BOLD_ICONS.caretDown;
+
+    trigger.appendChild(labelSpan);
+    trigger.appendChild(caretSpan);
+
+    const menu = document.createElement('div');
+    menu.className = `gpt-wa-custom-select-menu ${align === 'right' ? 'align-right' : 'align-left'}`;
+
+    function updateSelection() {
+        const found = options.find((o) => o.value === currentValue);
+        labelSpan.textContent = found ? found.label : currentValue;
+
+        menu.querySelectorAll('.gpt-wa-custom-select-item').forEach((item) => {
+            if (item.dataset.value === currentValue) {
+                item.classList.add('is-selected');
+            } else {
+                item.classList.remove('is-selected');
+            }
+        });
+    }
+
+    options.forEach((opt) => {
+        const item = document.createElement('div');
+        item.className = 'gpt-wa-custom-select-item';
+        item.dataset.value = opt.value;
+
+        const iconHtml = iconMap && iconMap[opt.value] ? iconMap[opt.value] : '';
+        item.innerHTML = `
+            <span class="gpt-wa-item-icon">${iconHtml}</span>
+            <span class="gpt-wa-item-text">${opt.label}</span>
+        `;
+
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (currentValue !== opt.value) {
+                currentValue = opt.value;
+                updateSelection();
+                container.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            closeMenu();
+        });
+
+        menu.appendChild(item);
+    });
+
+    updateSelection();
+
+    function openMenu() {
+        document.querySelectorAll('.gpt-wa-custom-select.is-open').forEach((el) => {
+            if (el !== container) el.classList.remove('is-open');
+        });
+        container.classList.add('is-open');
+    }
+
+    function closeMenu() {
+        container.classList.remove('is-open');
+    }
+
+    function toggleMenu() {
+        if (container.classList.contains('is-open')) {
+            closeMenu();
+        } else {
+            openMenu();
+        }
+    }
+
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleMenu();
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!container.contains(e.target)) {
+            closeMenu();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && container.classList.contains('is-open')) {
+            closeMenu();
+        }
+    });
+
+    container.appendChild(trigger);
+    container.appendChild(menu);
+
+    Object.defineProperty(container, 'value', {
+        get() {
+            return currentValue;
+        },
+        set(val) {
+            currentValue = val;
+            updateSelection();
+            container.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    });
+
+    return {
+        selectWrap: container,
+        selectElement: container
+    };
+}
+
 function createToneSelector() {
-    const wrap = document.createElement('div');
-    wrap.className = 'gpt-wa-select-row';
-
-    const iconHolder = document.createElement('span');
-    iconHolder.className = 'gpt-wa-select-icon';
-    iconHolder.innerHTML = TONE_ICON_MAP.default;
-
-    const select = document.createElement('select');
-    select.className = 'gpt-wa-tone-select';
-    select.title = 'Elige el tono o intención para la respuesta';
-
     const options = [
         { value: 'default', label: 'Mi estilo' },
         { value: 'formal', label: 'Formal' },
@@ -118,40 +235,23 @@ function createToneSelector() {
         { value: 'short', label: 'Corto' },
         { value: 'yes', label: 'Decir Sí' },
         { value: 'no', label: 'Decir No' },
-        { value: 'custom', label: 'Personalizado...' }
+        { value: 'custom', label: 'Personalizado…' }
     ];
 
-    options.forEach((opt) => {
-        const el = document.createElement('option');
-        el.value = opt.value;
-        el.textContent = opt.label;
-        select.appendChild(el);
+    const { selectWrap, selectElement } = createCustomSelect({
+        title: 'Elige el tono o intención para la respuesta',
+        options,
+        defaultValue: 'default',
+        iconMap: TONE_ICON_MAP,
+        align: 'left'
     });
 
-    select.addEventListener('change', () => {
-        iconHolder.innerHTML = TONE_ICON_MAP[select.value] || PH_BOLD_ICONS.target;
-    });
-
-    wrap.appendChild(iconHolder);
-    wrap.appendChild(select);
-
-    return { toneWrap: wrap, toneSelect: select };
+    return { toneWrap: selectWrap, toneSelect: selectElement };
 }
 
 function createRewriteControls() {
     const stack = document.createElement('div');
     stack.className = 'gpt-wa-stack-col';
-
-    const selectWrap = document.createElement('div');
-    selectWrap.className = 'gpt-wa-select-row';
-
-    const iconHolder = document.createElement('span');
-    iconHolder.className = 'gpt-wa-select-icon';
-    iconHolder.innerHTML = REWRITE_ICON_MAP.improve;
-
-    const select = document.createElement('select');
-    select.className = 'gpt-wa-rewrite-select';
-    select.title = 'Acción sobre el texto que tienes escrito en la barra de mensaje de WhatsApp';
 
     const actions = [
         { value: 'improve', label: 'Mejorar texto' },
@@ -161,19 +261,13 @@ function createRewriteControls() {
         { value: 'shorter_rewrite', label: 'Más corto' }
     ];
 
-    actions.forEach((act) => {
-        const el = document.createElement('option');
-        el.value = act.value;
-        el.textContent = act.label;
-        select.appendChild(el);
+    const { selectWrap, selectElement } = createCustomSelect({
+        title: 'Acción sobre el texto que tienes escrito en WhatsApp o sugerencia',
+        options: actions,
+        defaultValue: 'improve',
+        iconMap: REWRITE_ICON_MAP,
+        align: 'right'
     });
-
-    select.addEventListener('change', () => {
-        iconHolder.innerHTML = REWRITE_ICON_MAP[select.value] || PH_BOLD_ICONS.magicWand;
-    });
-
-    selectWrap.appendChild(iconHolder);
-    selectWrap.appendChild(select);
 
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -184,16 +278,29 @@ function createRewriteControls() {
     stack.appendChild(selectWrap);
     stack.appendChild(btn);
 
-    return { stack, rewriteSelect: select, rewriteButton: btn };
+    return { stack, rewriteSelect: selectElement, rewriteButton: btn };
 }
 
-function createCopyButton() {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'gpt-wa-icon-btn';
-    btn.title = 'Subir sugerencia a la barra de mensaje de WhatsApp';
-    btn.innerHTML = PH_BOLD_ICONS.exportUp;
-    return btn;
+function createSuggestionActionStack() {
+    const stack = document.createElement('div');
+    stack.className = 'gpt-wa-stack-col gpt-wa-stack-actions';
+
+    const insertBtn = document.createElement('button');
+    insertBtn.type = 'button';
+    insertBtn.className = 'gpt-wa-btn-action-top';
+    insertBtn.title = 'Insertar sugerencia en el chat de WhatsApp';
+    insertBtn.innerHTML = PH_BOLD_ICONS.exportUp;
+
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.className = 'gpt-wa-btn-action-bottom';
+    clearBtn.title = 'Borrar sugerencia y volver al inicio';
+    clearBtn.innerHTML = PH_BOLD_ICONS.trash;
+
+    stack.appendChild(insertBtn);
+    stack.appendChild(clearBtn);
+
+    return { stack, insertBtn, clearBtn };
 }
 
 function createGptFooter(footer, mainNode) {
@@ -235,10 +342,10 @@ function createGptFooter(footer, mainNode) {
     const rightControls = document.createElement('div');
     rightControls.className = 'gpt-wa-right-controls';
 
-    const copyButton = createCopyButton();
+    const { stack: actionStack, insertBtn: copyButton, clearBtn: clearButton } = createSuggestionActionStack();
     const { stack: rewriteStack, rewriteSelect, rewriteButton } = createRewriteControls();
 
-    rightControls.appendChild(copyButton);
+    rightControls.appendChild(actionStack);
     rightControls.appendChild(rewriteStack);
 
     mainRow.appendChild(leftStack);
@@ -252,7 +359,7 @@ function createGptFooter(footer, mainNode) {
     const customPromptInput = document.createElement('input');
     customPromptInput.type = 'text';
     customPromptInput.className = 'gpt-wa-custom-prompt-input';
-    customPromptInput.placeholder = 'Escribe qué quieres responder (ej: "dile que el martes a las 7pm me queda perfecto") y presiona Enter...';
+    customPromptInput.placeholder = 'Escribe qué quieres responder (ej: "dile que el martes a las 7pm me queda perfecto") y presiona Enter…';
 
     customPromptRow.appendChild(customPromptInput);
 

@@ -233,6 +233,7 @@ function gptButtonClicked() {
 
 function writeStatusHint(iconSvg, htmlMessage) {
     if (!newFooterParagraph) return;
+    newFooterParagraph.setAttribute('contenteditable', 'false');
     newFooterParagraph.innerHTML = `<span class="gpt-wa-suggestion-placeholder">${iconSvg}<span>${htmlMessage}</span></span>`;
     if (newFooterParagraph.parentElement) {
         newFooterParagraph.parentElement.scrollTop = 0;
@@ -272,7 +273,7 @@ function maybeShowInitialHint() {
         } else {
             writeStatusHint(
                 CS_PH_BOLD.sparkle,
-                'Listo para generar respuesta o mejorar tu mensaje...'
+                'Listo para generar respuesta o mejorar tu mensaje…'
             );
         }
     });
@@ -319,7 +320,8 @@ function mountGptBar(footer, mainNode) {
         customPromptInput,
         rewriteSelect,
         rewriteButton,
-        copyButton
+        copyButton,
+        clearButton
     } = createGptFooter(footer, mainNode);
 
     globalGptButtonObject = gptButtonObject;
@@ -331,10 +333,30 @@ function mountGptBar(footer, mainNode) {
 
     maybeShowInitialHint();
 
+    suggestionParagraph.parentElement.addEventListener('click', () => {
+        if (suggestionParagraph.querySelector('.gpt-wa-suggestion-placeholder')) {
+            suggestionParagraph.innerHTML = '';
+            suggestionParagraph.setAttribute('contenteditable', 'true');
+            suggestionParagraph.focus();
+        }
+    });
+
+    suggestionParagraph.addEventListener('blur', () => {
+        const text = (suggestionParagraph.textContent || '').trim();
+        if (!text) {
+            maybeShowInitialHint();
+        }
+    });
+
     copyButton.addEventListener('click', () => {
         const text = (newFooterParagraph.textContent || '').trim();
         if (!text || newFooterParagraph.querySelector('.gpt-wa-suggestion-placeholder')) return;
         copyToSendField(text, lastActionWasRewrite);
+    });
+
+    clearButton.addEventListener('click', () => {
+        newFooterParagraph.innerHTML = '';
+        maybeShowInitialHint();
     });
 
     gptButtonObject.gptButton.addEventListener('click', () => {
@@ -408,13 +430,13 @@ function writeTextToSuggestionField(response, isLoading = false) {
     if (!newFooterParagraph) return;
     try {
         if (isLoading) {
-            newFooterParagraph.innerHTML = `
-                <div class="gpt-wa-spinner-wrap">
-                    ${CS_PH_BOLD.spinner}
-                    <span>Generando respuesta con IA...</span>
-                </div>
-            `;
+            newFooterParagraph.setAttribute('contenteditable', 'false');
+            newFooterParagraph.innerHTML = `<span class="gpt-wa-spinner-wrap">${CS_PH_BOLD.spinner}<span>Generando respuesta con IA…</span></span>`;
+            if (newFooterParagraph.parentElement) {
+                newFooterParagraph.parentElement.scrollTop = 0;
+            }
         } else {
+            newFooterParagraph.setAttribute('contenteditable', 'true');
             newFooterParagraph.textContent = response;
             if (newFooterParagraph.parentElement) {
                 newFooterParagraph.parentElement.scrollTop = 0;
