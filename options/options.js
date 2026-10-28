@@ -281,10 +281,10 @@ function initUpdateChecker() {
 
         try {
             let latestVersion = '';
-            let downloadUrl = 'https://github.com/edumin-edu/asistente-ia-whatsapp-web/releases';
+            let downloadUrl = 'https://github.com/danamuro/asistente-ia-whatsapp-web/releases';
 
             // 1. Intentar consultar la API de Releases de GitHub
-            const resp = await fetch('https://api.github.com/repos/edumin-edu/asistente-ia-whatsapp-web/releases/latest');
+            const resp = await fetch('https://api.github.com/repos/danamuro/asistente-ia-whatsapp-web/releases/latest');
             if (resp.ok) {
                 const data = await resp.json();
                 latestVersion = (data.tag_name || '').replace(/^v/, '');
@@ -296,7 +296,7 @@ function initUpdateChecker() {
                 }
             } else {
                 // 2. Si aún no hay release publicada, consultar directamente el manifest.json en la rama principal
-                const rawResp = await fetch('https://raw.githubusercontent.com/edumin-edu/asistente-ia-whatsapp-web/main/manifest.json');
+                const rawResp = await fetch('https://raw.githubusercontent.com/danamuro/asistente-ia-whatsapp-web/main/manifest.json');
                 if (rawResp.ok) {
                     const rawData = await rawResp.json();
                     latestVersion = rawData.version || '';
