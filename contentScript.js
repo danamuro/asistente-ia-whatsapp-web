@@ -244,12 +244,21 @@ function maybeShowInitialHint() {
         optionsHintShown: 0,
         apiKey: '',
         geminiKey: '',
-        groqKey: ''
+        groqKey: '',
+        hasUpdate: false,
+        newVersion: '',
+        downloadUrl: ''
     }, (result) => {
         if (!newFooterParagraph) return;
         const hasAnyKey = Boolean((result.apiKey || result.geminiKey || result.groqKey || '').trim());
         const count = Number(result.optionsHintShown) || 0;
-        if (!hasAnyKey) {
+
+        if (result.hasUpdate && result.newVersion) {
+            writeStatusHint(
+                CS_PH_BOLD.sparkle,
+                `Nueva versión v${result.newVersion} disponible. <a href="${result.downloadUrl || 'https://github.com/danamuro/asistente-ia-whatsapp-web/releases/latest'}" target="_blank" style="color:#00a884; font-weight:600; text-decoration:underline; margin-left:4px;">Descargar actualización</a>`
+            );
+        } else if (!hasAnyKey) {
             writeStatusHint(
                 CS_PH_BOLD.warning,
                 'Haz clic en el icono de la extensión arriba en el navegador para configurar tu API Key gratuita.'

@@ -317,6 +317,47 @@ async function generateAIResponse(prompt, systemInstruction, overrideKey, overri
     }
 }
 
+async function checkForUpdatesAutomatically() {
+    try {
+        const currentVer = chrome.runtime.getManifest().version;
+        const resp = await fetch(
+            'https://raw.githubusercontent.com/danamuro/asistente-ia-whatsapp-web/main/manifest.json',
+            { cache: 'no-store' }
+        );
+        if (!resp.ok) return;
+        const remoteData = await resp.json();
+        const remoteVer = remoteData.version || '';
+
+        function isNewer(vRemote, vLocal) {
+            const pR = vRemote.split('.').map(Number);
+            const pL = vLocal.split('.').map(Number);
+            for (let i = 0; i < Math.max(pR.length, pL.length); i++) {
+                const nR = pR[i] || 0;
+                const nL = pL[i] || 0;
+                if (nR > nL) return true;
+                if (nR < nL) return false;
+            }
+            return false;
+        }
+
+        if (remoteVer && isNewer(remoteVer, currentVer)) {
+            chrome.action.setBadgeText({ text: 'NEW' });
+            chrome.action.setBadgeBackgroundColor({ color: '#00a884' });
+            chrome.storage.local.set({
+                hasUpdate: true,
+                newVersion: remoteVer,
+                downloadUrl: 'https://github.com/danamuro/asistente-ia-whatsapp-web/releases/latest'
+            });
+        } else {
+            chrome.action.setBadgeText({ text: '' });
+            chrome.storage.local.set({ hasUpdate: false });
+        }
+    } catch (_) {}
+}
+
+// Comprobar actualizaciones automáticamente al iniciar la extensión y periódicamente
+checkForUpdatesAutomatically();
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'openOptionsPage') {
         chrome.runtime.openOptionsPage();
