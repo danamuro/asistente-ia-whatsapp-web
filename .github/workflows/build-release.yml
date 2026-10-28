@@ -1,0 +1,64 @@
+name: Empaquetar y Publicar Extensión (.zip)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar código del repositorio
+        uses: actions/checkout@v4
+
+      - name: Validar sintaxis de archivos JavaScript y manifest.json
+        run: |
+          node --check background.js
+          node --check parser.js
+          node --check uiStuff.js
+          node --check confirmDialog.js
+          node --check contentScript.js
+          node --check options/options.js
+          node -e "JSON.parse(require('fs').readFileSync('manifest.json', 'utf8'));"
+
+      - name: Crear paquete ZIP de distribución
+        run: |
+          VERSION=$(node -p "require('./manifest.json').version")
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          zip -r "Asistente-IA-WhatsApp-Pro-v${VERSION}.zip" \
+            manifest.json \
+            background.js \
+            parser.js \
+            uiStuff.js \
+            confirmDialog.js \
+            contentScript.js \
+            content.css \
+            icons/ \
+            options/
+          cp "Asistente-IA-WhatsApp-Pro-v${VERSION}.zip" "Asistente-IA-WhatsApp-Pro.zip"
+
+      - name: Subir ZIP como artefacto de GitHub Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: Asistente-IA-WhatsApp-Pro
+          path: Asistente-IA-WhatsApp-Pro*.zip
+
+      - name: Publicar / Actualizar Release pública en GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: "Asistente IA para WhatsApp™ Web v${{ env.VERSION }}"
+          body: |
+            ### Descarga directa lista para instalar
+            Descarga el archivo **`Asistente-IA-WhatsApp-Pro.zip`** de abajo, descomprímelo en una carpeta y cárgalo en `chrome://extensions` u `opera://extensions` usando **Cargar descomprimida** (*Modo de desarrollador*).
+          files: |
+            Asistente-IA-WhatsApp-Pro.zip
+            Asistente-IA-WhatsApp-Pro-v${{ env.VERSION }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

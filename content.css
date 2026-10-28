@@ -1,0 +1,298 @@
+/* Estilos de la barra personalizada de Asistente IA para WhatsApp Web */
+
+#gpt-wa-custom-bar {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    background-color: #f0f2f5 !important;
+    padding: 6px 14px 8px 14px !important;
+    border-top: 1px solid rgba(134, 150, 160, 0.2) !important;
+    font-family: Segoe UI, Helvetica Neue, Helvetica, Lucida Grande, Arial, Ubuntu, Cantarell, Fira Sans, sans-serif !important;
+    z-index: 50 !important;
+    gap: 6px !important;
+    order: 9999 !important;
+    position: relative !important;
+}
+
+/* Soporte automático para el modo oscuro de WhatsApp Web */
+body.dark #gpt-wa-custom-bar,
+html[data-color-scheme="dark"] #gpt-wa-custom-bar {
+    background-color: #202c33 !important;
+    border-top: 1px solid rgba(134, 150, 160, 0.18) !important;
+}
+
+.gpt-wa-main-row {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    gap: 8px;
+    box-sizing: border-box;
+}
+
+/* Contenedor unido de 2 filas (Selector arriba + Botón abajo sin separación) */
+.gpt-wa-stack-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0;
+    width: 126px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(134, 150, 160, 0.4);
+    box-shadow: 0 1px 1px rgba(11, 20, 26, 0.04);
+}
+
+body.dark .gpt-wa-stack-col,
+html[data-color-scheme="dark"] .gpt-wa-stack-col {
+    border-color: rgba(134, 150, 160, 0.3);
+}
+
+/* Fila superior de cada columna (Icono Phosphor Bold + Select sin emojis) */
+.gpt-wa-select-row {
+    display: flex;
+    align-items: center;
+    background-color: #ffffff;
+    border-bottom: 1px solid rgba(134, 150, 160, 0.25);
+    height: 27px;
+    padding-left: 7px;
+    box-sizing: border-box;
+}
+
+body.dark .gpt-wa-select-row,
+html[data-color-scheme="dark"] .gpt-wa-select-row {
+    background-color: #2a3942;
+    border-bottom-color: rgba(134, 150, 160, 0.25);
+}
+
+.gpt-wa-select-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #008069;
+    flex-shrink: 0;
+    pointer-events: none;
+}
+
+body.dark .gpt-wa-select-icon,
+html[data-color-scheme="dark"] .gpt-wa-select-icon {
+    color: #00a884;
+}
+
+.gpt-wa-tone-select,
+.gpt-wa-rewrite-select {
+    width: 100%;
+    background-color: transparent;
+    color: #3b4a54;
+    border: none;
+    border-radius: 0;
+    padding: 2px 4px 2px 4px;
+    height: 100%;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    box-sizing: border-box;
+}
+
+body.dark .gpt-wa-tone-select,
+html[data-color-scheme="dark"] .gpt-wa-tone-select,
+body.dark .gpt-wa-rewrite-select,
+html[data-color-scheme="dark"] .gpt-wa-rewrite-select {
+    background-color: #2a3942;
+    color: #e9edef;
+}
+
+/* Botones de acción (Fila 2 inferior pegada al selector superior) */
+.gpt-wa-btn-main,
+.gpt-wa-rewrite-btn {
+    width: 100%;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    background-color: #D9FDD3;
+    color: #005c4b;
+    padding: 0 8px;
+    border: none;
+    border-radius: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: background-color 0.2s ease;
+    white-space: nowrap;
+}
+
+.gpt-wa-btn-main:hover,
+.gpt-wa-rewrite-btn:hover {
+    background-color: #BCE5A7;
+}
+
+body.dark .gpt-wa-btn-main,
+html[data-color-scheme="dark"] .gpt-wa-btn-main,
+body.dark .gpt-wa-rewrite-btn,
+html[data-color-scheme="dark"] .gpt-wa-rewrite-btn {
+    background-color: #005c4b;
+    color: #e9edef;
+}
+
+body.dark .gpt-wa-btn-main:hover,
+html[data-color-scheme="dark"] .gpt-wa-btn-main:hover,
+body.dark .gpt-wa-rewrite-btn:hover,
+html[data-color-scheme="dark"] .gpt-wa-rewrite-btn:hover {
+    background-color: #007a63;
+}
+
+/* Fila opcional cuando elige "Personalizado..." */
+.gpt-wa-custom-prompt-row {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.gpt-wa-custom-prompt-row.visible {
+    display: flex;
+}
+
+.gpt-wa-custom-prompt-input {
+    flex: 1;
+    background-color: #ffffff;
+    color: #111b21;
+    border: 1px solid #00a884;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 13px;
+    outline: none;
+}
+
+body.dark .gpt-wa-custom-prompt-input,
+html[data-color-scheme="dark"] .gpt-wa-custom-prompt-input {
+    background-color: #2a3942;
+    color: #e9edef;
+}
+
+/* Caja central de sugerencia: display block para que el scroll SIEMPRE inicie en la línea 1 */
+.gpt-wa-suggestion-box {
+    flex: 1;
+    background-color: #ffffff;
+    color: #111b21;
+    border-radius: 8px;
+    padding: 7px 12px;
+    height: 57px;
+    max-height: 57px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    font-size: 14px;
+    line-height: 1.38;
+    display: block;
+    box-sizing: border-box;
+    box-shadow: 0 1px 1px rgba(11, 20, 26, 0.05);
+    word-break: break-word;
+    cursor: text;
+    outline: none;
+}
+
+body.dark .gpt-wa-suggestion-box,
+html[data-color-scheme="dark"] .gpt-wa-suggestion-box {
+    background-color: #2a3942;
+    color: #e9edef;
+}
+
+.gpt-wa-suggestion-text {
+    width: 100%;
+    min-height: 100%;
+    outline: none;
+    white-space: pre-wrap;
+    user-select: text;
+    margin: 0;
+    padding: 0;
+}
+
+.gpt-wa-suggestion-placeholder {
+    color: #667781;
+    font-size: 13px;
+    line-height: 1.4;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+body.dark .gpt-wa-suggestion-placeholder,
+html[data-color-scheme="dark"] .gpt-wa-suggestion-placeholder {
+    color: #8696a0;
+}
+
+/* Controles de la derecha */
+.gpt-wa-right-controls {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* Botón de icono Phosphor Bold para insertar el texto en WhatsApp */
+.gpt-wa-icon-btn {
+    background-color: #ffffff;
+    border: 1px solid rgba(134, 150, 160, 0.35);
+    width: 38px;
+    height: 57px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    color: #008069;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+.gpt-wa-icon-btn:hover {
+    background-color: #D9FDD3;
+    border-color: #00a884;
+    color: #005c4b;
+}
+
+body.dark .gpt-wa-icon-btn,
+html[data-color-scheme="dark"] .gpt-wa-icon-btn {
+    background-color: #2a3942;
+    border-color: rgba(134, 150, 160, 0.3);
+    color: #00a884;
+}
+
+body.dark .gpt-wa-icon-btn:hover,
+html[data-color-scheme="dark"] .gpt-wa-icon-btn:hover {
+    background-color: #005c4b;
+    color: #e9edef;
+}
+
+/* Spinner de carga Phosphor Bold */
+@keyframes gpt-wa-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.gpt-wa-spinner-wrap {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    gap: 8px;
+    color: #54656F;
+    font-size: 13.5px;
+}
+
+body.dark .gpt-wa-spinner-wrap,
+html[data-color-scheme="dark"] .gpt-wa-spinner-wrap {
+    color: #aebac1;
+}
+
+.gpt-wa-spinner-svg {
+    animation: gpt-wa-spin 0.75s linear infinite;
+    color: #00a884;
+}
