@@ -24,6 +24,7 @@ const PROVIDER_CONFIG = {
         models: [
             { value: '', label: 'Automático (Detectar el mejor modelo activo de tu cuenta)' },
             { value: 'openai/gpt-oss-120b', label: 'OpenAI GPT-OSS 120B (Gratis — Máxima inteligencia)' },
+            { value: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B Versatile (Gratis — Excelente y rápido)' },
             { value: 'meta-llama/llama-4-scout-17b-16e-instruct', label: 'Llama 4 Scout de Meta (Gratis — Ultrarrápido)' },
             { value: 'meta-llama/llama-4-maverick-17b-128e-instruct', label: 'Llama 4 Maverick de Meta (Gratis — Natural)' },
             { value: 'qwen/qwen3-32b', label: 'Qwen 3 32B (Gratis — Excelente en español)' }
@@ -33,14 +34,15 @@ const PROVIDER_CONFIG = {
         label: 'Tu API Key Gratuita de Google Gemini (empieza por AIza…):',
         placeholder: 'AIzaSy…',
         helpHtml: `
-            <strong>${OPT_PH_BOLD.sparkle}100% GRATIS con tu cuenta de Google (Sin tarjeta):</strong><br>
-            1. Entra a <a href="https://aistudio.google.com/apikey" target="_blank" style="font-weight:700; color:#065f46; text-decoration:underline;">Google AI Studio (aistudio.google.com/apikey)</a>.<br>
-            2. Haz clic en el botón azul <b>"Create API key"</b>, cópiala y pégala abajo.
+            <strong>${OPT_PH_BOLD.sparkle}100% GRATIS con cuenta Gmail personal (Sin tarjeta):</strong><br>
+            1. Entra a <a href="https://aistudio.google.com/apikey" target="_blank" style="font-weight:700; color:#065f46; text-decoration:underline;">Google AI Studio (aistudio.google.com/apikey)</a> con un correo <b>@gmail.com personal</b> <i>(los correos educativos/institucionales bloquean el plan gratis de la API)</i>.<br>
+            2. Haz clic en <b>"Create API key"</b> → <b>"Create API key in new project"</b>, cópiala y pégala abajo.
         `,
         models: [
             { value: '', label: 'Automático (Detectar el mejor Gemini Flash activo)' },
             { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Gratis — Rápido y muy inteligente)' },
-            { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (Gratis — Estable y veloz)' }
+            { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (Gratis — Estable y veloz)' },
+            { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash (Gratis — Alta compatibilidad)' }
         ]
     }
 };
@@ -72,18 +74,23 @@ providerSelect.addEventListener('change', () => {
 });
 
 apiKeyInput.addEventListener('input', () => {
-    const val = apiKeyInput.value.trim();
+    const val = apiKeyInput.value.trim().replace(/^["']|["']$/g, '');
     const currentProvider = providerSelect.value;
-    cachedKeys[currentProvider] = val;
 
-    if (val.startsWith('AIza') && currentProvider !== 'gemini') {
+    if (val.startsWith('AIza')) {
         cachedKeys.gemini = val;
-        providerSelect.value = 'gemini';
-        updateProviderUI('gemini', null);
-    } else if (val.startsWith('gsk_') && currentProvider !== 'groq') {
+        if (currentProvider !== 'gemini') {
+            providerSelect.value = 'gemini';
+            updateProviderUI('gemini', null);
+        }
+    } else if (val.startsWith('gsk_')) {
         cachedKeys.groq = val;
-        providerSelect.value = 'groq';
-        updateProviderUI('groq', null);
+        if (currentProvider !== 'groq') {
+            providerSelect.value = 'groq';
+            updateProviderUI('groq', null);
+        }
+    } else {
+        cachedKeys[currentProvider] = val;
     }
 });
 
@@ -184,15 +191,42 @@ testApiBtn.addEventListener('click', () => {
             }
             testStatusBox.className = 'test-status ok';
             testStatusBox.innerHTML = `${OPT_PH_BOLD.checkCircle}<span>${response.text} — Modelo activo: <b>${response.usedModel || 'Automático'}</b></span>`;
+
+            const cleanTestedKey = apiKey.replace(/^["']|["']$/g, '');
+            let resolvedProvider = provider;
+            if (cleanTestedKey.startsWith('AIza')) {
+                cachedKeys.gemini = cleanTestedKey;
+                resolvedProvider = 'gemini';
+            } else if (cleanTestedKey.startsWith('gsk_')) {
+                cachedKeys.groq = cleanTestedKey;
+                resolvedProvider = 'groq';
+            } else {
+                cachedKeys[provider] = cleanTestedKey;
+            }
+            chrome.storage.local.set({
+                apiChoice: resolvedProvider,
+                apiKey: cleanTestedKey,
+                geminiKey: cachedKeys.gemini,
+                groqKey: cachedKeys.groq,
+                model: response.usedModel || model || ''
+            });
         }
     });
 });
 
 function saveOptions(e) {
     e.preventDefault();
-    const provider = providerSelect.value;
-    const apiKey = apiKeyInput.value.trim();
-    cachedKeys[provider] = apiKey;
+    let provider = providerSelect.value;
+    const apiKey = apiKeyInput.value.trim().replace(/^["']|["']$/g, '');
+    if (apiKey.startsWith('AIza')) {
+        cachedKeys.gemini = apiKey;
+        provider = 'gemini';
+    } else if (apiKey.startsWith('gsk_')) {
+        cachedKeys.groq = apiKey;
+        provider = 'groq';
+    } else {
+        cachedKeys[provider] = apiKey;
+    }
 
     const model = modelSelect.value;
     const historyCount = Math.min(30, Math.max(2, Number(document.getElementById('history-count').value) || 10));
@@ -228,11 +262,14 @@ function restoreOptions() {
         sendHistory: 'manual',
         toneOfVoice: 'Usa mi propio estilo de escritura con naturalidad. Sé conciso.'
     }, (items) => {
-        cachedKeys.gemini = items.geminiKey || (items.apiKey.startsWith('AIza') ? items.apiKey : '');
-        cachedKeys.groq = items.groqKey || (items.apiKey.startsWith('gsk_') ? items.apiKey : '');
+        const rawGem = items.geminiKey || (items.apiKey.startsWith('AIza') ? items.apiKey : '');
+        const rawGroq = items.groqKey || (items.apiKey.startsWith('gsk_') ? items.apiKey : '');
+        cachedKeys.gemini = rawGem && !rawGem.startsWith('gsk_') ? rawGem : '';
+        cachedKeys.groq = rawGroq && !rawGroq.startsWith('AIza') ? rawGroq : '';
 
         let provider = items.apiChoice;
         if (cachedKeys.groq && !cachedKeys.gemini) provider = 'groq';
+        if (cachedKeys.gemini && !cachedKeys.groq) provider = 'gemini';
         if (provider !== 'groq' && provider !== 'gemini') provider = 'groq';
 
         providerSelect.value = provider;

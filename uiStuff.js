@@ -60,7 +60,7 @@ const PH_BOLD_ICONS = {
     ),
     caretDown: phBoldSvg(
         '<polyline points="208 96 128 176 48 96"/>',
-        12
+        11
     ),
     trash: phBoldSvg(
         '<line x1="216" y1="56" x2="40" y2="56"/><line x1="104" y1="104" x2="104" y2="168"/><line x1="152" y1="104" x2="152" y2="168"/><path d="M200,56V208a8,8,0,0,1-8,8H64a8,8,0,0,1-8-8V56"/><path d="M168,56V40a16,16,0,0,0-16-16H104A16,16,0,0,0,88,40V56"/>',
@@ -69,7 +69,7 @@ const PH_BOLD_ICONS = {
 };
 
 const TONE_ICON_MAP = {
-    default: PH_BOLD_ICONS.target,
+    default: PH_BOLD_ICONS.sparkle,
     formal: PH_BOLD_ICONS.briefcase,
     casual: PH_BOLD_ICONS.smiley,
     short: PH_BOLD_ICONS.lightning,
@@ -86,63 +86,51 @@ const REWRITE_ICON_MAP = {
     shorter_rewrite: PH_BOLD_ICONS.scissors
 };
 
-function createGptButton() {
-    const gptButton = document.createElement('button');
-    gptButton.type = 'button';
-    gptButton.className = 'gpt-wa-btn-main';
-    gptButton.innerHTML = `${PH_BOLD_ICONS.sparkle}<span>Generar IA</span>`;
-    gptButton.title = 'Generar respuesta sugerida con IA para esta conversación';
-
-    return {
-        gptButton,
-        setBusy(value) {
-            if (value) {
-                gptButton.style.opacity = '0.75';
-                gptButton.innerHTML = `${PH_BOLD_ICONS.sparkle}<span>Generando…</span>`;
-            } else {
-                gptButton.style.opacity = '1';
-                gptButton.innerHTML = `${PH_BOLD_ICONS.sparkle}<span>Generar IA</span>`;
-            }
-        }
-    };
-}
-
-// Componente de selector desplegable personalizado con iconos Phosphor Bold y fuente Figtree
-function createCustomSelect({ title, options, defaultValue, iconMap, align = 'left' }) {
+// Botón unificado Split Button: botón principal de acción + flecha para desplegar opciones
+function createToneSplitButton() {
     const container = document.createElement('div');
-    container.className = 'gpt-wa-custom-select';
-    container.title = title;
+    container.className = 'gpt-wa-split-btn gpt-wa-split-generate';
 
-    let currentValue = defaultValue || (options[0] && options[0].value);
+    let currentTone = 'default';
 
-    const trigger = document.createElement('button');
-    trigger.type = 'button';
-    trigger.className = 'gpt-wa-custom-select-trigger';
+    const mainBtn = document.createElement('button');
+    mainBtn.type = 'button';
+    mainBtn.className = 'gpt-wa-split-main';
+    mainBtn.innerHTML = `${PH_BOLD_ICONS.sparkle}<span>Mi estilo</span>`;
+    mainBtn.title = 'Generar respuesta con IA (Mi estilo natural)';
 
-    const labelSpan = document.createElement('span');
-    labelSpan.className = 'gpt-wa-custom-select-label';
-
-    const caretSpan = document.createElement('span');
-    caretSpan.className = 'gpt-wa-select-caret';
-    caretSpan.innerHTML = PH_BOLD_ICONS.caretDown;
-
-    trigger.appendChild(labelSpan);
-    trigger.appendChild(caretSpan);
+    const arrowBtn = document.createElement('button');
+    arrowBtn.type = 'button';
+    arrowBtn.className = 'gpt-wa-split-arrow';
+    arrowBtn.innerHTML = PH_BOLD_ICONS.caretDown;
+    arrowBtn.title = 'Elegir tono para la respuesta';
 
     const menu = document.createElement('div');
-    menu.className = `gpt-wa-custom-select-menu ${align === 'right' ? 'align-right' : 'align-left'}`;
+    menu.className = 'gpt-wa-custom-select-menu align-left';
+
+    const options = [
+        { value: 'default', label: 'Mi estilo' },
+        { value: 'formal', label: 'Formal' },
+        { value: 'casual', label: 'Casual' },
+        { value: 'short', label: 'Corto' },
+        { value: 'yes', label: 'Decir Sí' },
+        { value: 'no', label: 'Decir No' },
+        { value: 'custom', label: 'Personalizado…' }
+    ];
 
     function updateSelection() {
-        const found = options.find((o) => o.value === currentValue);
-        labelSpan.textContent = found ? found.label : currentValue;
-
         menu.querySelectorAll('.gpt-wa-custom-select-item').forEach((item) => {
-            if (item.dataset.value === currentValue) {
+            if (item.dataset.value === currentTone) {
                 item.classList.add('is-selected');
             } else {
                 item.classList.remove('is-selected');
             }
         });
+        const found = options.find((o) => o.value === currentTone);
+        const iconHtml = TONE_ICON_MAP[currentTone] || PH_BOLD_ICONS.sparkle;
+        const labelText = found ? found.label : 'Mi estilo';
+        mainBtn.innerHTML = `${iconHtml}<span>${labelText}</span>`;
+        mainBtn.title = `Generar respuesta con IA (${labelText})`;
     }
 
     options.forEach((opt) => {
@@ -150,7 +138,7 @@ function createCustomSelect({ title, options, defaultValue, iconMap, align = 'le
         item.className = 'gpt-wa-custom-select-item';
         item.dataset.value = opt.value;
 
-        const iconHtml = iconMap && iconMap[opt.value] ? iconMap[opt.value] : '';
+        const iconHtml = TONE_ICON_MAP[opt.value] || '';
         item.innerHTML = `
             <span class="gpt-wa-item-icon">${iconHtml}</span>
             <span class="gpt-wa-item-text">${opt.label}</span>
@@ -158,12 +146,11 @@ function createCustomSelect({ title, options, defaultValue, iconMap, align = 'le
 
         item.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (currentValue !== opt.value) {
-                currentValue = opt.value;
-                updateSelection();
-                container.dispatchEvent(new Event('change', { bubbles: true }));
-            }
+            currentTone = opt.value;
+            updateSelection();
             closeMenu();
+            // Disparar evento change para actualizar estado SIN generar automáticamente
+            container.dispatchEvent(new Event('change', { bubbles: true }));
         });
 
         menu.appendChild(item);
@@ -172,7 +159,7 @@ function createCustomSelect({ title, options, defaultValue, iconMap, align = 'le
     updateSelection();
 
     function openMenu() {
-        document.querySelectorAll('.gpt-wa-custom-select.is-open').forEach((el) => {
+        document.querySelectorAll('.gpt-wa-split-btn.is-open').forEach((el) => {
             if (el !== container) el.classList.remove('is-open');
         });
         container.classList.add('is-open');
@@ -182,17 +169,13 @@ function createCustomSelect({ title, options, defaultValue, iconMap, align = 'le
         container.classList.remove('is-open');
     }
 
-    function toggleMenu() {
+    arrowBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         if (container.classList.contains('is-open')) {
             closeMenu();
         } else {
             openMenu();
         }
-    }
-
-    trigger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleMenu();
     });
 
     document.addEventListener('click', (e) => {
@@ -207,100 +190,181 @@ function createCustomSelect({ title, options, defaultValue, iconMap, align = 'le
         }
     });
 
-    container.appendChild(trigger);
+    container.appendChild(mainBtn);
+    container.appendChild(arrowBtn);
     container.appendChild(menu);
 
     Object.defineProperty(container, 'value', {
         get() {
-            return currentValue;
+            return currentTone;
         },
         set(val) {
-            currentValue = val;
+            currentTone = val;
             updateSelection();
-            container.dispatchEvent(new Event('change', { bubbles: true }));
         }
     });
 
     return {
-        selectWrap: container,
-        selectElement: container
+        container,
+        gptButton: mainBtn,
+        toneSelect: container,
+        setBusy(value) {
+            const currentLabel = mainBtn.querySelector('span')?.textContent || 'Generar IA';
+            if (value) {
+                mainBtn.style.opacity = '0.75';
+                mainBtn.innerHTML = `${PH_BOLD_ICONS.sparkle}<span>Generando…</span>`;
+            } else {
+                mainBtn.style.opacity = '1';
+                updateSelection();
+            }
+        }
     };
 }
 
-function createToneSelector() {
-    const options = [
-        { value: 'default', label: 'Mi estilo' },
-        { value: 'formal', label: 'Formal' },
-        { value: 'casual', label: 'Casual' },
-        { value: 'short', label: 'Corto' },
-        { value: 'yes', label: 'Decir Sí' },
-        { value: 'no', label: 'Decir No' },
-        { value: 'custom', label: 'Personalizado…' }
-    ];
+// Botón unificado Split Button para Reescribir / Traducir
+function createRewriteSplitButton() {
+    const container = document.createElement('div');
+    container.className = 'gpt-wa-split-btn gpt-wa-split-rewrite secondary';
 
-    const { selectWrap, selectElement } = createCustomSelect({
-        title: 'Elige el tono o intención para la respuesta',
-        options,
-        defaultValue: 'default',
-        iconMap: TONE_ICON_MAP,
-        align: 'left'
-    });
-
-    return { toneWrap: selectWrap, toneSelect: selectElement };
-}
-
-function createRewriteControls() {
-    const stack = document.createElement('div');
-    stack.className = 'gpt-wa-stack-col';
+    let currentAction = 'improve';
 
     const actions = [
-        { value: 'improve', label: 'Mejorar texto' },
+        { value: 'improve', label: 'Mejorar' },
         { value: 'translate_en', label: 'A Inglés' },
         { value: 'translate_es', label: 'A Español' },
         { value: 'formal_rewrite', label: 'Más formal' },
         { value: 'shorter_rewrite', label: 'Más corto' }
     ];
 
-    const { selectWrap, selectElement } = createCustomSelect({
-        title: 'Acción sobre el texto que tienes escrito en WhatsApp o sugerencia',
-        options: actions,
-        defaultValue: 'improve',
-        iconMap: REWRITE_ICON_MAP,
-        align: 'right'
+    const mainBtn = document.createElement('button');
+    mainBtn.type = 'button';
+    mainBtn.className = 'gpt-wa-split-main';
+    mainBtn.innerHTML = `${PH_BOLD_ICONS.magicWand}<span>Mejorar</span>`;
+    mainBtn.title = 'Mejorar redacción y ortografía del texto con IA';
+
+    const arrowBtn = document.createElement('button');
+    arrowBtn.type = 'button';
+    arrowBtn.className = 'gpt-wa-split-arrow';
+    arrowBtn.innerHTML = PH_BOLD_ICONS.caretDown;
+    arrowBtn.title = 'Elegir acción: traducir, resumir o cambiar formalidad';
+
+    const menu = document.createElement('div');
+    menu.className = 'gpt-wa-custom-select-menu align-right';
+
+    function updateSelection() {
+        const found = actions.find((o) => o.value === currentAction);
+        const iconHtml = REWRITE_ICON_MAP[currentAction] || PH_BOLD_ICONS.magicWand;
+        const labelText = found ? found.label : 'Mejorar';
+        mainBtn.innerHTML = `${iconHtml}<span>${labelText}</span>`;
+        mainBtn.title = `Aplicar: ${labelText}`;
+
+        menu.querySelectorAll('.gpt-wa-custom-select-item').forEach((item) => {
+            if (item.dataset.value === currentAction) {
+                item.classList.add('is-selected');
+            } else {
+                item.classList.remove('is-selected');
+            }
+        });
+    }
+
+    actions.forEach((opt) => {
+        const item = document.createElement('div');
+        item.className = 'gpt-wa-custom-select-item';
+        item.dataset.value = opt.value;
+
+        const iconHtml = REWRITE_ICON_MAP[opt.value] || '';
+        item.innerHTML = `
+            <span class="gpt-wa-item-icon">${iconHtml}</span>
+            <span class="gpt-wa-item-text">${opt.label}</span>
+        `;
+
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentAction = opt.value;
+            updateSelection();
+            closeMenu();
+            // Disparar evento change para actualizar estado SIN ejecutar automáticamente
+            container.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+
+        menu.appendChild(item);
     });
 
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'gpt-wa-rewrite-btn';
-    btn.innerHTML = `${PH_BOLD_ICONS.check}<span>Aplicar</span>`;
-    btn.title = 'Aplicar al texto que escribiste en la caja de WhatsApp (o a la sugerencia actual)';
+    updateSelection();
 
-    stack.appendChild(selectWrap);
-    stack.appendChild(btn);
+    function openMenu() {
+        document.querySelectorAll('.gpt-wa-split-btn.is-open').forEach((el) => {
+            if (el !== container) el.classList.remove('is-open');
+        });
+        container.classList.add('is-open');
+    }
 
-    return { stack, rewriteSelect: selectElement, rewriteButton: btn };
+    function closeMenu() {
+        container.classList.remove('is-open');
+    }
+
+    arrowBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (container.classList.contains('is-open')) {
+            closeMenu();
+        } else {
+            openMenu();
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!container.contains(e.target)) {
+            closeMenu();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && container.classList.contains('is-open')) {
+            closeMenu();
+        }
+    });
+
+    container.appendChild(mainBtn);
+    container.appendChild(arrowBtn);
+    container.appendChild(menu);
+
+    Object.defineProperty(container, 'value', {
+        get() {
+            return currentAction;
+        },
+        set(val) {
+            currentAction = val;
+            updateSelection();
+        }
+    });
+
+    return {
+        container,
+        rewriteButton: mainBtn,
+        rewriteSelect: container
+    };
 }
 
 function createSuggestionActionStack() {
-    const stack = document.createElement('div');
-    stack.className = 'gpt-wa-stack-col gpt-wa-stack-actions';
+    const group = document.createElement('div');
+    group.className = 'gpt-wa-suggestion-actions-col';
 
     const insertBtn = document.createElement('button');
     insertBtn.type = 'button';
-    insertBtn.className = 'gpt-wa-btn-action-top';
-    insertBtn.title = 'Insertar sugerencia en el chat de WhatsApp';
+    insertBtn.className = 'gpt-wa-btn-action-insert';
+    insertBtn.title = 'Insertar sugerencia en WhatsApp (reemplaza texto actual)';
     insertBtn.innerHTML = PH_BOLD_ICONS.exportUp;
 
     const clearBtn = document.createElement('button');
     clearBtn.type = 'button';
-    clearBtn.className = 'gpt-wa-btn-action-bottom';
-    clearBtn.title = 'Borrar sugerencia y volver al inicio';
+    clearBtn.className = 'gpt-wa-btn-action-clear';
+    clearBtn.title = 'Borrar sugerencia';
     clearBtn.innerHTML = PH_BOLD_ICONS.trash;
 
-    stack.appendChild(insertBtn);
-    stack.appendChild(clearBtn);
+    group.appendChild(insertBtn);
+    group.appendChild(clearBtn);
 
-    return { stack, insertBtn, clearBtn };
+    return { stack: group, insertBtn, clearBtn };
 }
 
 function createGptFooter(footer, mainNode) {
@@ -309,48 +373,47 @@ function createGptFooter(footer, mainNode) {
         existingBar.remove();
     }
 
-    const customBar = document.createElement('footer');
+    // Usar elemento div propio sin heredar clases de WhatsApp para evitar alturas o paddings asimétricos
+    const customBar = document.createElement('div');
     customBar.id = 'gpt-wa-custom-bar';
-    if (footer && footer.className) {
-        customBar.className = footer.className;
-    }
 
     const mainRow = document.createElement('div');
     mainRow.className = 'gpt-wa-main-row';
 
-    // Columna izquierda unida (Fila 1: Selector de estilo con icono Phosphor Bold, Fila 2: Botón Generar IA)
-    const leftStack = document.createElement('div');
-    leftStack.className = 'gpt-wa-stack-col';
+    // 1. Botón unificado Generar IA + Selector de tono integrado
+    const toneSplit = createToneSplitButton();
 
-    const { toneWrap, toneSelect } = createToneSelector();
-    const gptButtonObject = createGptButton();
-
-    leftStack.appendChild(toneWrap);
-    leftStack.appendChild(gptButtonObject.gptButton);
-
-    // Caja central de sugerencia
+    // 2. Caja central unificada e integrada: Icono dinámico + Texto sugerido + Botones de acción integrados
     const suggestionBox = document.createElement('div');
     suggestionBox.className = 'gpt-wa-suggestion-box';
 
+    const suggestionIconCol = document.createElement('div');
+    suggestionIconCol.className = 'gpt-wa-suggestion-icon-col';
+    suggestionIconCol.innerHTML = PH_BOLD_ICONS.sparkle;
+
+    const suggestionContentCol = document.createElement('div');
+    suggestionContentCol.className = 'gpt-wa-suggestion-content-col';
+
     const suggestionParagraph = document.createElement('div');
-    suggestionParagraph.className = 'selectable-text copyable-text gpt-wa-suggestion-text';
-    suggestionParagraph.setAttribute('contenteditable', 'true');
+    suggestionParagraph.className = 'selectable-text gpt-wa-suggestion-text';
+    suggestionParagraph.setAttribute('contenteditable', 'false');
     suggestionParagraph.setAttribute('spellcheck', 'false');
-    suggestionBox.appendChild(suggestionParagraph);
 
-    // Controles derechos: Botón de subir sugerencia pegado a la caja + Columna de Mejorar/Aplicar
-    const rightControls = document.createElement('div');
-    rightControls.className = 'gpt-wa-right-controls';
+    suggestionContentCol.appendChild(suggestionParagraph);
 
+    // Acciones integradas en el extremo derecho de la misma caja (sin separación de gap externa)
     const { stack: actionStack, insertBtn: copyButton, clearBtn: clearButton } = createSuggestionActionStack();
-    const { stack: rewriteStack, rewriteSelect, rewriteButton } = createRewriteControls();
 
-    rightControls.appendChild(actionStack);
-    rightControls.appendChild(rewriteStack);
+    suggestionBox.appendChild(suggestionIconCol);
+    suggestionBox.appendChild(suggestionContentCol);
+    suggestionBox.appendChild(actionStack);
 
-    mainRow.appendChild(leftStack);
+    // 3. Botón unificado Reescribir / Traducir
+    const rewriteSplit = createRewriteSplitButton();
+
+    mainRow.appendChild(toneSplit.container);
     mainRow.appendChild(suggestionBox);
-    mainRow.appendChild(rightControls);
+    mainRow.appendChild(rewriteSplit.container);
 
     // Fila secundaria desplegable cuando el usuario selecciona "Personalizado..."
     const customPromptRow = document.createElement('div');
@@ -363,8 +426,8 @@ function createGptFooter(footer, mainNode) {
 
     customPromptRow.appendChild(customPromptInput);
 
-    toneSelect.addEventListener('change', () => {
-        if (toneSelect.value === 'custom') {
+    toneSplit.toneSelect.addEventListener('change', () => {
+        if (toneSplit.toneSelect.value === 'custom') {
             customPromptRow.classList.add('visible');
             customPromptInput.focus();
         } else {
@@ -395,11 +458,16 @@ function createGptFooter(footer, mainNode) {
         newFooter: customBar,
         suggestionBox,
         suggestionParagraph,
-        gptButtonObject,
-        toneSelect,
+        suggestionIconCol,
+        gptButtonObject: {
+            gptButton: toneSplit.gptButton,
+            setBusy: toneSplit.setBusy
+        },
+        toneSelect: toneSplit.toneSelect,
         customPromptInput,
-        rewriteSelect,
-        rewriteButton,
-        copyButton
+        rewriteSelect: rewriteSplit.rewriteSelect,
+        rewriteButton: rewriteSplit.rewriteButton,
+        copyButton,
+        clearButton
     };
 }

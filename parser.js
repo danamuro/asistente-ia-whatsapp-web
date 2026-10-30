@@ -67,12 +67,16 @@ function parseHtml(mainNode, maxMessages = 10) {
     const linkedSet = new LinkedSet();
 
     // Buscar contenedores de mensajes con soporte para versiones actuales y nuevas de WhatsApp Web
-    let msgContainers = Array.from(mainNode.querySelectorAll('.message-out, .message-in'));
+    let msgContainers = Array.from(mainNode.querySelectorAll('.message-out, .message-in, div[data-id^="true_"], div[data-id^="false_"]'));
     if (msgContainers.length === 0) {
         msgContainers = Array.from(mainNode.querySelectorAll('div[role="row"], div[data-id]')).filter((row) => {
             // Excluir nuestra propia barra o elementos vacíos
             if (row.closest('#gpt-wa-custom-bar')) return false;
-            return row.querySelector('.selectable-text, .copyable-text, [data-pre-plain-text]') !== null;
+            return (
+                row.querySelector(
+                    '.selectable-text, .copyable-text, [data-pre-plain-text], .gpt-wa-audio-transcript-text, [data-gpt-transcript]'
+                ) !== null
+            );
         });
     }
 
@@ -98,12 +102,22 @@ function parseHtml(mainNode, maxMessages = 10) {
             }
         }
 
+        // Si es un mensaje de voz ya transcrito por la extensión, incluirlo en el historial de contexto
+        const transcriptNode = container.querySelector('.gpt-wa-audio-transcript-text');
+        const transcriptAttr = container.getAttribute('data-gpt-transcript') || (transcriptNode ? transcriptNode.textContent : '');
+        if (transcriptAttr && transcriptAttr.trim().length > 0) {
+            chatHistory.push(`${prefix}[Audio]: ${transcriptAttr.trim()}`);
+            return;
+        }
+
         // Extraer el texto del mensaje evitando duplicar citas
         let textElement = null;
         if (prePlainNode) {
             textElement = prePlainNode.querySelector('.selectable-text.copyable-text, .selectable-text') || prePlainNode;
         } else {
-            const selectables = container.querySelectorAll('.selectable-text.copyable-text, .selectable-text');
+            const selectables = Array.from(
+                container.querySelectorAll('.selectable-text.copyable-text, .selectable-text')
+            ).filter((el) => !el.closest('.gpt-wa-audio-transcribe-wrap'));
             if (selectables.length > 0) {
                 textElement = selectables[selectables.length - 1];
             }
@@ -132,15 +146,15 @@ function parseHtml(mainNode, maxMessages = 10) {
 }
 
 function getWhatsAppComposerElement(mainNode) {
-    const root = mainNode || document.getElementById('main') || document;
-    const footer = root.querySelector('footer:not(#gpt-wa-custom-bar)') || root;
+    const liveMain = mainNode && mainNode.isConnected ? mainNode : (document.getElementById('main') || document);
+    const footer = liveMain.querySelector('footer:not(#gpt-wa-custom-bar)') || liveMain;
 
-    // Buscar el editor Lexical de WhatsApp (excluyendo nuestra barra de IA)
+    // Buscar el editor Lexical de WhatsApp (excluyendo nuestra barra de IA y el header)
     const candidates = footer.querySelectorAll(
-        'div[contenteditable="true"][role="textbox"], div[contenteditable="true"][data-tab], .lexical-rich-text-input div[contenteditable="true"], div[contenteditable="true"]'
+        'div[contenteditable="true"][data-lexical-editor="true"], div[contenteditable="true"][role="textbox"], div[contenteditable="true"][data-tab], .lexical-rich-text-input div[contenteditable="true"], div[contenteditable="true"]'
     );
     for (const el of candidates) {
-        if (!el.closest('#gpt-wa-custom-bar')) {
+        if (!el.closest('#gpt-wa-custom-bar') && !el.closest('header')) {
             return el;
         }
     }

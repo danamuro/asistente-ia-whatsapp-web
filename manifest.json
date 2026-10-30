@@ -12,6 +12,16 @@
    },
    "content_scripts": [
       {
+         "js": [
+            "audioInterceptor.js"
+         ],
+         "matches": [
+            "https://web.whatsapp.com/*"
+         ],
+         "run_at": "document_start",
+         "world": "MAIN"
+      },
+      {
          "css": [
             "content.css"
          ],
