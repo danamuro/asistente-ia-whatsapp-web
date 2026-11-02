@@ -743,13 +743,15 @@ html[data-color-scheme="dark"] .gpt-wa-btn-action-bottom:hover {
 .gpt-wa-audio-transcribe-wrap {
     display: flex;
     flex-direction: column;
-    gap: 5px;
-    margin-top: 4px;
-    margin-bottom: 2px;
+    gap: 6px;
+    margin-top: 6px;
+    margin-bottom: 4px;
+    margin-left: 62px;
+    margin-right: 14px;
     padding: 0;
     box-sizing: border-box;
     width: fit-content;
-    max-width: 100%;
+    max-width: calc(100% - 76px);
     align-self: flex-start;
 }
 
@@ -844,16 +846,17 @@ html[data-color-scheme="dark"] .gpt-wa-audio-mini-btn.secondary:hover {
 }
 
 .gpt-wa-audio-transcript-box {
-    background-color: rgba(255, 255, 255, 0.72);
-    border-left: 3px solid #00a884;
-    border-radius: 6px;
-    padding: 6px 9px;
+    background-color: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(0, 168, 132, 0.35);
+    border-radius: 8px;
+    padding: 7px 11px;
     font-size: 13.2px;
-    line-height: 1.4;
+    line-height: 1.42;
     color: #111b21;
     word-break: break-word;
     white-space: pre-wrap;
     user-select: text;
+    box-sizing: border-box;
     max-width: 340px;
 }
 
@@ -861,17 +864,17 @@ body.dark .gpt-wa-audio-transcript-box,
 html[data-color-scheme="dark"] .gpt-wa-audio-transcript-box {
     background-color: rgba(17, 27, 33, 0.45);
     color: #e9edef;
-    border-left-color: #00a884;
+    border-color: rgba(0, 168, 132, 0.4);
 }
 
 .gpt-wa-audio-transcript-error {
-    border-left-color: #d97706;
+    border-color: rgba(217, 119, 6, 0.45);
     color: #b45309;
     font-size: 12.2px;
 }
 
 body.dark .gpt-wa-audio-transcript-error,
 html[data-color-scheme="dark"] .gpt-wa-audio-transcript-error {
-    border-left-color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.45);
     color: #fbbf24;
 }
