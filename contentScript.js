@@ -175,7 +175,7 @@ function getToneInstruction(toneValue, customPromptText) {
             return 'Responde negativamente o rechazando amablemente con tacto y naturalidad.';
         case 'custom':
             return customPromptText
-                ? `Sigue estrictamente esta instrucción para mi respuesta: "${customPromptText}".`
+                ? `Redacta el mensaje basándote en esta idea o instrucción del usuario: "${customPromptText}".`
                 : '';
         default:
             return '';
@@ -183,6 +183,36 @@ function getToneInstruction(toneValue, customPromptText) {
 }
 
 async function createPrompt(lastIsMine, chatHistoryShort) {
+    const result = await chrome.storage.local.get({
+        toneOfVoice: 'Usa mi propio estilo de escritura natural. Sé conciso y directo.'
+    });
+
+    const baseTone = result.toneOfVoice || 'Usa mi propio estilo de escritura natural. Sé conciso y directo.';
+    const quickToneValue = globalToneSelect ? globalToneSelect.value : 'default';
+    const customPromptText = globalCustomPromptInput ? globalCustomPromptInput.value.trim() : '';
+
+    if (quickToneValue === 'custom' && customPromptText) {
+        const hasHistory = chatHistoryShort && chatHistoryShort !== '(Sin historial previo)';
+        return `Eres un redactor inteligente de respuestas para WhatsApp en primera persona ("Yo") para enviar a mi contacto.
+
+MI INDICACIÓN / IDEA DE LO QUE DESEO COMUNICAR:
+"""
+${customPromptText}
+"""
+
+REGLAS CRÍTICAS PARA GENERAR LA RESPUESTA:
+1. Redacta el mensaje real y conversacional que yo le enviaré directamente al contacto.
+2. IMPORTANTE: NUNCA copies ni repitas textualmente mi indicación. Por ejemplo:
+   - Si mi indicación dice "dile que llego a las 7", NUNCA respondas "dile que llego a las 7"; debes redactar un mensaje directo al contacto como: "Hola, te aviso que voy a llegar a las 7, disculpa la demora."
+   - Si mi indicación dice "cancela la cita de mañana", redacta un mensaje educado cancelando la cita.
+   - Si escribo puntos breves o ideas sueltas, redacta un mensaje completo, educado y natural en primera persona.
+3. Transforma cualquier indicación en tercera persona ("dile que...", "avísale que...", "pregúntale si...", "explícale que...") a primera persona dirigiéndote al contacto de forma fluida ("Hola...", "¿Cómo estás? Te escribo para...").
+4. Estilo de redacción solicitado: ${baseTone}.
+${hasHistory ? `5. Contexto de los mensajes recientes de la conversación:\n---\n${chatHistoryShort}\n---\n` : ''}
+6. Idioma: Responde en el mismo idioma de la conversación (o en español por defecto).
+7. Devuelve ÚNICAMENTE el texto final del mensaje para enviar. No agregues comillas, ni introducciones, ni prefijos como "Yo:" o "Respuesta:".`;
+    }
+
     const mePrefix = 'Me: ';
     const promptPrefix1 =
         "You are an excellent chat-turn completer for WhatsApp. Your own turns in the provided chat-history are prefixed by 'Me: ', and the turns of others by '<integer>: '. In a one-on-one conversation the other person's turn is prefixed by '1: '. Always reply in the same language used in the conversation unless instructed otherwise. Output ONLY the message text to send, without quotes and without the 'Me:' prefix.";
@@ -196,15 +226,7 @@ async function createPrompt(lastIsMine, chatHistoryShort) {
             'As "Me", give a natural reply completing the following chat conversation flow.';
     }
 
-    const result = await chrome.storage.local.get({
-        toneOfVoice: 'Usa mi propio estilo de escritura natural. Sé conciso y directo.'
-    });
-
-    const baseTone = result.toneOfVoice || 'Usa mi propio estilo de escritura natural. Sé conciso y directo.';
-    const quickToneValue = globalToneSelect ? globalToneSelect.value : 'default';
-    const customPromptText = globalCustomPromptInput ? globalCustomPromptInput.value.trim() : '';
     const extraTone = getToneInstruction(quickToneValue, customPromptText);
-
     return `${promptPrefix1}\n${promptCenter}\nStyle guide: ${baseTone} ${extraTone}\n\nChat history:\n${chatHistoryShort}\n\n${mePrefix}`;
 }
 
@@ -224,12 +246,24 @@ async function generateReplySuggestion() {
     lastActionWasRewrite = false;
     const { chatHistoryShort, lastIsMine, messageCount } = parseHtml(mainNode, historyCount);
 
-    if (messageCount === 0 && (!globalToneSelect || globalToneSelect.value !== 'custom')) {
+    const quickToneValue = globalToneSelect ? globalToneSelect.value : 'default';
+    const customPromptText = globalCustomPromptInput ? globalCustomPromptInput.value.trim() : '';
+
+    if (quickToneValue === 'custom' && !customPromptText) {
+        return;
+    }
+
+    if (messageCount === 0 && quickToneValue !== 'custom') {
         writeStatusHint(CS_PH_BOLD.info, 'No se detectaron mensajes recientes en este chat.');
         return;
     }
 
     const prompt = await createPrompt(lastIsMine, chatHistoryShort || '(Sin historial previo)');
+    const isCustom = Boolean(quickToneValue === 'custom' && customPromptText);
+    const systemInstruction = isCustom
+        ? 'Eres un redactor experto para WhatsApp. Tu tarea es convertir las indicaciones e ideas del usuario en un mensaje real, educado y directo para su contacto en primera persona ("Yo"). NUNCA repitas la indicación del usuario textualmente ni uses tercera persona como "dile que...".'
+        : undefined;
+
     if (globalGptButtonObject) globalGptButtonObject.setBusy(true);
     writeTextToSuggestionField('', true);
 
@@ -237,6 +271,7 @@ async function generateReplySuggestion() {
         chrome.runtime.sendMessage({
             message: 'sendChatToGpt',
             prompt: prompt,
+            systemInstruction: systemInstruction,
             requestType: 'reply'
         }, (response) => {
             if (chrome.runtime.lastError) {
@@ -328,6 +363,18 @@ async function handleRewriteClick() {
 }
 
 function gptButtonClicked() {
+    const quickToneValue = globalToneSelect ? globalToneSelect.value : 'default';
+    if (quickToneValue === 'custom') {
+        const customPromptText = globalCustomPromptInput ? globalCustomPromptInput.value.trim() : '';
+        if (!customPromptText) {
+            writeStatusHint(
+                CS_PH_BOLD.info,
+                'Escribe primero qué deseas responder en el campo de texto y presiona Enter para generar.'
+            );
+            if (globalCustomPromptInput) globalCustomPromptInput.focus();
+            return;
+        }
+    }
     triggerEvent();
 }
 
@@ -731,6 +778,7 @@ function mountGptBar(footer, mainNode) {
         gptButtonObject,
         toneSelect,
         customPromptInput,
+        customPromptSendBtn,
         rewriteSelect,
         rewriteButton,
         copyButton,
@@ -781,6 +829,15 @@ function mountGptBar(footer, mainNode) {
             gptButtonClicked();
         }
     });
+
+    if (customPromptSendBtn) {
+        customPromptSendBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+        });
+        customPromptSendBtn.addEventListener('click', () => {
+            gptButtonClicked();
+        });
+    }
 
     rewriteButton.addEventListener('mousedown', (e) => {
         e.preventDefault();
@@ -911,8 +968,8 @@ function handleAiResponse(response) {
     }
     if (typeof response.text === 'string') {
         const clean = response.text
-            .replace(/^Me:\s*/i, '')
-            .replace(/^["«]|["»]$/g, '')
+            .replace(/^(Me|Yo|Respuesta|Mensaje):\s*/i, '')
+            .replace(/^["'«]|["'»]$/g, '')
             .trim();
         writeTextToSuggestionField(clean, false);
     }

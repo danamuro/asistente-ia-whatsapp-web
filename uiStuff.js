@@ -419,17 +419,40 @@ function createGptFooter(footer, mainNode) {
     const customPromptRow = document.createElement('div');
     customPromptRow.className = 'gpt-wa-custom-prompt-row';
 
+    const customPromptBox = document.createElement('div');
+    customPromptBox.className = 'gpt-wa-custom-prompt-box';
+
+    const customPromptIconCol = document.createElement('div');
+    customPromptIconCol.className = 'gpt-wa-custom-prompt-icon-col';
+    customPromptIconCol.innerHTML = PH_BOLD_ICONS.pencil;
+    customPromptIconCol.title = 'Instrucción personalizada para la IA';
+
     const customPromptInput = document.createElement('input');
     customPromptInput.type = 'text';
     customPromptInput.className = 'gpt-wa-custom-prompt-input';
     customPromptInput.placeholder = 'Escribe qué quieres responder (ej: "dile que el martes a las 7pm me queda perfecto") y presiona Enter…';
 
-    customPromptRow.appendChild(customPromptInput);
+    const customPromptSendBtn = document.createElement('button');
+    customPromptSendBtn.type = 'button';
+    customPromptSendBtn.className = 'gpt-wa-custom-prompt-send-btn';
+    customPromptSendBtn.title = 'Generar mensaje con IA (Enter)';
+    customPromptSendBtn.innerHTML = `${PH_BOLD_ICONS.sparkle}<span>Generar</span>`;
+
+    customPromptBox.appendChild(customPromptIconCol);
+    customPromptBox.appendChild(customPromptInput);
+    customPromptBox.appendChild(customPromptSendBtn);
+    customPromptRow.appendChild(customPromptBox);
 
     toneSplit.toneSelect.addEventListener('change', () => {
         if (toneSplit.toneSelect.value === 'custom') {
             customPromptRow.classList.add('visible');
             customPromptInput.focus();
+            requestAnimationFrame(() => {
+                const chatContainer = mainNode ? mainNode.querySelector('[role="application"]') : null;
+                if (chatContainer && chatContainer.parentElement) {
+                    chatContainer.parentElement.scrollTop = chatContainer.parentElement.scrollHeight;
+                }
+            });
         } else {
             customPromptRow.classList.remove('visible');
         }
@@ -465,6 +488,7 @@ function createGptFooter(footer, mainNode) {
         },
         toneSelect: toneSplit.toneSelect,
         customPromptInput,
+        customPromptSendBtn,
         rewriteSelect: rewriteSplit.rewriteSelect,
         rewriteButton: rewriteSplit.rewriteButton,
         copyButton,
