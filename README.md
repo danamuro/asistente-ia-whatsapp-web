@@ -29,3 +29,15 @@ Extensión ligera y rápida para **WhatsApp™ Web** que genera sugerencias de r
 4. Activa el **Modo de desarrollador** (arriba a la derecha).
 5. Haz clic en **Cargar descomprimida** (*Load unpacked*) y selecciona la carpeta extraída.
 6. Haz clic en el icono de la extensión en la barra del navegador, pega tu API Key gratuita de **Groq** o **Google Gemini** y presiona **Guardar Configuración**.
+
+## Publicación automática
+
+El workflow `.github/workflows/build-release.yml` se ejecuta automáticamente cada vez que se hace `push` a `main` o `master`. El proceso valida los archivos JavaScript, toma la versión de `manifest.json`, genera los archivos ZIP y publica o actualiza una Release de GitHub con ellos.
+
+Para publicar una nueva versión:
+
+1. Actualiza el campo `version` en `manifest.json`.
+2. Haz commit y push a `main`.
+3. Descarga `Asistente-IA-WhatsApp-Pro.zip` desde la sección **[Releases](../../releases)**.
+
+También se puede ejecutar manualmente desde **GitHub → Actions → Empaquetar y Publicar Extensión (.zip) → Run workflow**.
