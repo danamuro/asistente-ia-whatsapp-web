@@ -40,38 +40,106 @@ function getTextWithEmojis(element) {
     return result;
 }
 
-function isOutgoingMessage(el) {
+function isOutgoingMessage(el, mainNode, activeChatTitle = '') {
     if (!el) return false;
     if (el.classList && el.classList.contains('message-out')) return true;
     if (el.closest && el.closest('.message-out')) return true;
     if (el.querySelector && el.querySelector('.message-out')) return true;
 
-    // Fallback: en WhatsApp Web los mensajes propios tienen data-id="true_..."
+    if (el.classList && el.classList.contains('message-in')) return false;
+    if (el.closest && el.closest('.message-in')) return false;
+    if (el.querySelector && el.querySelector('.message-in')) return false;
+
+    // En WhatsApp Web los mensajes propios tienen data-id="true_..."
     const dataIdNode = (el.hasAttribute && el.hasAttribute('data-id'))
         ? el
         : (el.closest && el.closest('[data-id]')) || (el.querySelector && el.querySelector('[data-id]'));
     if (dataIdNode) {
         const dataId = dataIdNode.getAttribute('data-id') || '';
-        if (dataId.startsWith('true_')) return true;
-        if (dataId.startsWith('false_')) return false;
+        if (dataId.startsWith('true_') || dataId.includes('_true_')) return true;
+        if (dataId.startsWith('false_') || dataId.includes('_false_')) return false;
     }
+
+    // Los iconos de check de envío/entrega/lectura solo existen en mensajes enviados por el propio usuario
+    if (
+        el.querySelector &&
+        el.querySelector(
+            'span[data-icon="msg-dblcheck"], span[data-icon="msg-check"], span[data-icon="msg-time"], span[data-icon="msg-wait"], span[data-icon^="status-dblcheck"], span[data-icon^="status-check"], span[data-icon^="status-time"], [data-testid="msg-dblcheck"], [data-testid="msg-check"], [data-testid="msg-time"], span[aria-label*="Entregado" i], span[aria-label*="Leído" i], span[aria-label*="Enviado" i], span[aria-label*="Delivered" i], span[aria-label*="Read" i], span[aria-label*="Sent" i]'
+        )
+    ) {
+        return true;
+    }
+
+    // Verificar etiqueta de autor en data-pre-plain-text
+    const prePlainNode = (el.hasAttribute && el.hasAttribute('data-pre-plain-text'))
+        ? el
+        : (el.querySelector && el.querySelector('[data-pre-plain-text]'));
+    if (prePlainNode) {
+        const messageLabel = prePlainNode.getAttribute('data-pre-plain-text') || '';
+        const senderName = messageLabel.replace(/\[.*?\]\s*/, '').replace(/:\s*$/, '').trim();
+        if (senderName) {
+            const lowerSender = senderName.toLowerCase();
+            if (lowerSender === 'tú' || lowerSender === 'tu' || lowerSender === 'you') {
+                return true;
+            }
+            if (activeChatTitle && lowerSender === activeChatTitle.toLowerCase()) {
+                return false;
+            }
+        }
+    }
+
+    // Fallback geométrico: en WhatsApp Web las burbujas propias están alineadas a la derecha del panel #main
+    try {
+        const refMain = mainNode || document.getElementById('main');
+        const bubbleEl =
+            (el.querySelector && el.querySelector('[data-pre-plain-text], .copyable-text, .selectable-text')) || el;
+        if (refMain && bubbleEl && bubbleEl.getBoundingClientRect) {
+            const mainRect = refMain.getBoundingClientRect();
+            const bubbleRect = bubbleEl.getBoundingClientRect();
+            if (mainRect.width > 100 && bubbleRect.width > 0) {
+                const leftGap = bubbleRect.left - mainRect.left;
+                const rightGap = mainRect.right - bubbleRect.right;
+                if (leftGap > rightGap + 25) return true;
+                if (rightGap > leftGap + 25) return false;
+            }
+        }
+    } catch (_) {}
+
     return false;
+}
+
+function isQuotedMessageElement(el) {
+    if (!el || !el.closest) return false;
+    return Boolean(
+        el.closest(
+            '.quoted-mention, [data-testid="quoted-message"], [aria-label*="Mensaje citado" i], [aria-label*="Quoted message" i]'
+        )
+    );
 }
 
 function parseHtml(mainNode, maxMessages = 10) {
     if (!mainNode) {
-        return { chatHistoryShort: '', lastIsMine: false, messageCount: 0 };
+        return { chatHistoryShort: '', lastIsMine: false, messageCount: 0, lastMessageText: '' };
     }
 
+    const headerTitleEl = mainNode.querySelector('header span[dir="auto"], header [title]');
+    const activeChatTitle = headerTitleEl
+        ? (headerTitleEl.getAttribute('title') || headerTitleEl.textContent || '').trim()
+        : '';
+
     const chatHistory = [];
-    const linkedSet = new LinkedSet();
+    let lastIsMine = false;
+    let lastMessageText = '';
 
     // Buscar contenedores de mensajes con soporte para versiones actuales y nuevas de WhatsApp Web
-    let msgContainers = Array.from(mainNode.querySelectorAll('.message-out, .message-in, div[data-id^="true_"], div[data-id^="false_"]'));
+    let msgContainers = Array.from(
+        mainNode.querySelectorAll('.message-out, .message-in, div[data-id^="true_"], div[data-id^="false_"]')
+    ).filter((row) => !row.closest('#gpt-wa-custom-bar') && !row.closest('footer') && !row.closest('header'));
+
     if (msgContainers.length === 0) {
         msgContainers = Array.from(mainNode.querySelectorAll('div[role="row"], div[data-id]')).filter((row) => {
-            // Excluir nuestra propia barra o elementos vacíos
-            if (row.closest('#gpt-wa-custom-bar')) return false;
+            // Excluir nuestra propia barra, header, footer o elementos vacíos
+            if (row.closest('#gpt-wa-custom-bar') || row.closest('footer') || row.closest('header')) return false;
             return (
                 row.querySelector(
                     '.selectable-text, .copyable-text, [data-pre-plain-text], .gpt-wa-audio-transcript-text, [data-gpt-transcript]'
@@ -80,44 +148,45 @@ function parseHtml(mainNode, maxMessages = 10) {
         });
     }
 
-    msgContainers = msgContainers.slice(-maxMessages);
+    // Deduplicar contenedores anidados (ej. div[data-id^="true_"] que envuelve a .message-out)
+    msgContainers = msgContainers.filter(
+        (el, idx, arr) => !arr.some((other, otherIdx) => otherIdx !== idx && other.contains(el))
+    );
 
     msgContainers.forEach((container) => {
         if (container.closest('#gpt-wa-custom-bar')) return;
 
-        const outgoing = isOutgoingMessage(container);
-        let prefix = outgoing ? 'Me: ' : '1: ';
+        const outgoing = isOutgoingMessage(container, mainNode, activeChatTitle);
+        const prefix = outgoing ? '[YO]: ' : '[CONTACTO]: ';
 
         const prePlainNode = container.hasAttribute('data-pre-plain-text')
             ? container
             : container.querySelector('[data-pre-plain-text]');
 
-        if (prePlainNode && !outgoing) {
-            const messageLabel = prePlainNode.getAttribute('data-pre-plain-text') || '';
-            const contactName = messageLabel.replace(/\[.*?\]\s*/, '').replace(/:\s*$/, '').trim();
-            if (contactName) {
-                linkedSet.add(contactName);
-                const contactNumber = linkedSet.getPosition(contactName) + 1;
-                prefix = `${contactNumber}: `;
-            }
-        }
-
         // Si es un mensaje de voz ya transcrito por la extensión, incluirlo en el historial de contexto
         const transcriptNode = container.querySelector('.gpt-wa-audio-transcript-text');
         const transcriptAttr = container.getAttribute('data-gpt-transcript') || (transcriptNode ? transcriptNode.textContent : '');
         if (transcriptAttr && transcriptAttr.trim().length > 0) {
-            chatHistory.push(`${prefix}[Audio]: ${transcriptAttr.trim()}`);
+            const cleanAudioText = transcriptAttr.trim();
+            chatHistory.push({
+                line: `${prefix}[Audio]: ${cleanAudioText}`,
+                outgoing,
+                text: cleanAudioText
+            });
             return;
         }
 
-        // Extraer el texto del mensaje evitando duplicar citas
+        // Extraer el texto del mensaje evitando duplicar citas (mensajes citados)
         let textElement = null;
         if (prePlainNode) {
-            textElement = prePlainNode.querySelector('.selectable-text.copyable-text, .selectable-text') || prePlainNode;
+            const innerSelectables = Array.from(
+                prePlainNode.querySelectorAll('.selectable-text.copyable-text, .selectable-text')
+            ).filter((el) => !el.closest('.gpt-wa-audio-transcribe-wrap') && !isQuotedMessageElement(el));
+            textElement = innerSelectables.length > 0 ? innerSelectables[innerSelectables.length - 1] : prePlainNode;
         } else {
             const selectables = Array.from(
                 container.querySelectorAll('.selectable-text.copyable-text, .selectable-text')
-            ).filter((el) => !el.closest('.gpt-wa-audio-transcribe-wrap'));
+            ).filter((el) => !el.closest('.gpt-wa-audio-transcribe-wrap') && !isQuotedMessageElement(el));
             if (selectables.length > 0) {
                 textElement = selectables[selectables.length - 1];
             }
@@ -126,22 +195,28 @@ function parseHtml(mainNode, maxMessages = 10) {
         if (textElement) {
             const messageContent = getTextWithEmojis(textElement).trim();
             if (messageContent.length > 0) {
-                chatHistory.push(prefix + messageContent);
+                chatHistory.push({
+                    line: prefix + messageContent,
+                    outgoing,
+                    text: messageContent
+                });
             }
         }
     });
 
-    let lastIsMine = false;
-    if (chatHistory.length > 0) {
-        const lastExpression = chatHistory[chatHistory.length - 1];
-        lastIsMine = lastExpression.startsWith('Me:');
+    const recentMessages = chatHistory.slice(-maxMessages);
+    if (recentMessages.length > 0) {
+        const lastEntry = recentMessages[recentMessages.length - 1];
+        lastIsMine = lastEntry.outgoing;
+        lastMessageText = lastEntry.text;
     }
 
-    const chatHistoryShortAsString = chatHistory.join('\n\n');
+    const chatHistoryShortAsString = recentMessages.map((item) => item.line).join('\n\n');
     return {
         chatHistoryShort: chatHistoryShortAsString,
         lastIsMine: lastIsMine,
-        messageCount: chatHistory.length
+        messageCount: recentMessages.length,
+        lastMessageText: lastMessageText
     };
 }
 

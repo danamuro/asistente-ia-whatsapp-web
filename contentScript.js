@@ -161,6 +161,123 @@ async function copyToSendField(text, replaceExisting = true) {
     }
 }
 
+// Corrección de triple clic en la barra de escritura de WhatsApp Web (editor Lexical):
+// El triple clic nativo del navegador selecciona hasta el borde del nodo <p>/<div>, lo cual hace que
+// Lexical colapse y quite la selección. Forzamos una selección limpia de nodos de texto (igual que Ctrl+A).
+function selectComposerParagraphText(composerEl, targetNode) {
+    if (!composerEl) return false;
+    const targetEl =
+        targetNode && targetNode.nodeType === Node.TEXT_NODE ? targetNode.parentElement : targetNode;
+    const paragraph = targetEl && targetEl.closest ? targetEl.closest('p') : null;
+    const scopeEl = paragraph && composerEl.contains(paragraph) ? paragraph : composerEl;
+
+    const filter = {
+        acceptNode(node) {
+            return node.nodeValue && node.nodeValue.length > 0
+                ? NodeFilter.FILTER_ACCEPT
+                : NodeFilter.FILTER_SKIP;
+        }
+    };
+
+    let walker = document.createTreeWalker(scopeEl, NodeFilter.SHOW_TEXT, filter);
+    let firstTextNode = walker.nextNode();
+    if (!firstTextNode && scopeEl !== composerEl) {
+        walker = document.createTreeWalker(composerEl, NodeFilter.SHOW_TEXT, filter);
+        firstTextNode = walker.nextNode();
+    }
+    if (!firstTextNode) return false;
+
+    let lastTextNode = firstTextNode;
+    while (walker.nextNode()) {
+        lastTextNode = walker.currentNode;
+    }
+
+    const selection = window.getSelection();
+    if (!selection) return false;
+
+    const range = document.createRange();
+    range.setStart(firstTextNode, 0);
+    range.setEnd(lastTextNode, lastTextNode.nodeValue.length);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    document.dispatchEvent(new Event('selectionchange'));
+    return true;
+}
+
+function getComposerFromEventTarget(eventTarget) {
+    const el =
+        eventTarget && eventTarget.nodeType === Node.TEXT_NODE
+            ? eventTarget.parentElement
+            : eventTarget;
+    if (!el || !el.closest) return null;
+    if (el.closest('#gpt-wa-custom-bar') || el.closest('header')) return null;
+
+    const inFooter = el.closest(
+        'footer, [data-testid="conversation-footer"], [data-testid="compose-box"]'
+    );
+    if (!inFooter) return null;
+
+    return el.closest(
+        'div[contenteditable="true"][data-lexical-editor="true"], div[contenteditable="true"][role="textbox"], div[contenteditable="true"]'
+    );
+}
+
+(function installComposerTripleClickFix() {
+    window.addEventListener(
+        'mousedown',
+        (e) => {
+            if (e.button !== 0 || e.detail < 3) return;
+            const composerEl = getComposerFromEventTarget(e.target);
+            if (!composerEl) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+
+            if (document.activeElement !== composerEl) {
+                composerEl.focus();
+            }
+            selectComposerParagraphText(composerEl, e.target);
+        },
+        true
+    );
+
+    window.addEventListener(
+        'mouseup',
+        (e) => {
+            if (e.button !== 0 || e.detail < 3) return;
+            const composerEl = getComposerFromEventTarget(e.target);
+            if (!composerEl) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+
+            selectComposerParagraphText(composerEl, e.target);
+            requestAnimationFrame(() => {
+                selectComposerParagraphText(composerEl, e.target);
+            });
+        },
+        true
+    );
+
+    window.addEventListener(
+        'click',
+        (e) => {
+            if (e.button !== 0 || e.detail < 3) return;
+            const composerEl = getComposerFromEventTarget(e.target);
+            if (!composerEl) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+
+            selectComposerParagraphText(composerEl, e.target);
+        },
+        true
+    );
+})();
+
 function getToneInstruction(toneValue, customPromptText) {
     switch (toneValue) {
         case 'formal':
@@ -182,7 +299,7 @@ function getToneInstruction(toneValue, customPromptText) {
     }
 }
 
-async function createPrompt(lastIsMine, chatHistoryShort) {
+async function createPrompt(lastIsMine, chatHistoryShort, lastMessageText = '') {
     const result = await chrome.storage.local.get({
         toneOfVoice: 'Usa mi propio estilo de escritura natural. Sé conciso y directo.'
     });
@@ -193,7 +310,7 @@ async function createPrompt(lastIsMine, chatHistoryShort) {
 
     if (quickToneValue === 'custom' && customPromptText) {
         const hasHistory = chatHistoryShort && chatHistoryShort !== '(Sin historial previo)';
-        return `Eres un redactor inteligente de respuestas para WhatsApp en primera persona ("Yo") para enviar a mi contacto.
+        return `Eres un redactor inteligente de respuestas para WhatsApp en primera persona ("[YO]") para enviar a mi contacto ("[CONTACTO]").
 
 MI INDICACIÓN / IDEA DE LO QUE DESEO COMUNICAR:
 """
@@ -201,7 +318,7 @@ ${customPromptText}
 """
 
 REGLAS CRÍTICAS PARA GENERAR LA RESPUESTA:
-1. Redacta el mensaje real y conversacional que yo le enviaré directamente al contacto.
+1. Redacta el mensaje real y conversacional que [YO] le enviaré directamente a [CONTACTO].
 2. IMPORTANTE: NUNCA copies ni repitas textualmente mi indicación. Por ejemplo:
    - Si mi indicación dice "dile que llego a las 7", NUNCA respondas "dile que llego a las 7"; debes redactar un mensaje directo al contacto como: "Hola, te aviso que voy a llegar a las 7, disculpa la demora."
    - Si mi indicación dice "cancela la cita de mañana", redacta un mensaje educado cancelando la cita.
@@ -213,21 +330,56 @@ ${hasHistory ? `5. Contexto de los mensajes recientes de la conversación:\n---\
 7. Devuelve ÚNICAMENTE el texto final del mensaje para enviar. No agregues comillas, ni introducciones, ni prefijos como "Yo:" o "Respuesta:".`;
     }
 
-    const mePrefix = 'Me: ';
-    const promptPrefix1 =
-        "You are an excellent chat-turn completer for WhatsApp. Your own turns in the provided chat-history are prefixed by 'Me: ', and the turns of others by '<integer>: '. In a one-on-one conversation the other person's turn is prefixed by '1: '. Always reply in the same language used in the conversation unless instructed otherwise. Output ONLY the message text to send, without quotes and without the 'Me:' prefix.";
+    const extraTone = getToneInstruction(quickToneValue, customPromptText);
 
-    let promptCenter;
     if (lastIsMine) {
-        promptCenter =
-            'Complete the following chat by providing a follow-up message for my sequence. Do not react to yourself, just continue the thought, elaborate, or add a brief supplementary point without repeating the last message.';
-    } else {
-        promptCenter =
-            'As "Me", give a natural reply completing the following chat conversation flow.';
+        return `Actúa exclusivamente como [YO] en esta conversación de WhatsApp con [CONTACTO].
+
+HISTORIAL DE LA CONVERSACIÓN:
+---
+${chatHistoryShort}
+---
+
+SITUACIÓN ACTUAL:
+El último mensaje del chat lo envié [YO] ("${lastMessageText}") y [CONTACTO] aún no ha respondido.
+
+TAREA:
+Redacta un único mensaje breve y natural que [YO] pueda enviar a continuación a [CONTACTO] para complementar o dar seguimiento a lo que [YO] acabo de enviar.
+
+REGLAS CRÍTICAS DE ROL Y PERSPECTIVA (OBLIGATORIO):
+1. TÚ ERES [YO] (el emisor del último mensaje), NUNCA eres [CONTACTO].
+2. PROHIBIDO responder a mi propio mensaje como si fueras [CONTACTO]:
+   - Ejemplo de lo que JAMÁS debes hacer: Si [YO] envié "Ya se enviaron los enlaces/certificado a su correo", NUNCA generes "Gracias, ya revisé el correo y los enlaces" ni "Confirmo que lo recibí", porque eso lo diría [CONTACTO], no [YO].
+   - Lo correcto desde el rol de [YO] es dar un seguimiento útil (por ejemplo: "Me confirmas por favor cuando logres revisarlo; si no aparece en tu bandeja de entrada, revisa en spam. ¡Quedo atento!").
+3. No repitas lo que [YO] acabo de decir; solo añade un complemento breve o seguimiento cordial desde la perspectiva de [YO].
+4. Estilo y tono solicitados: ${baseTone} ${extraTone}
+5. Idioma: Responde en el mismo idioma de la conversación (español por defecto).
+6. Devuelve ÚNICAMENTE el texto final del mensaje para enviar, sin comillas y sin prefijos como "[YO]:" o "Yo:".`;
     }
 
-    const extraTone = getToneInstruction(quickToneValue, customPromptText);
-    return `${promptPrefix1}\n${promptCenter}\nStyle guide: ${baseTone} ${extraTone}\n\nChat history:\n${chatHistoryShort}\n\n${mePrefix}`;
+    return `Actúa exclusivamente como [YO] en esta conversación de WhatsApp para responder al último mensaje de [CONTACTO].
+
+HISTORIAL DE LA CONVERSACIÓN:
+---
+${chatHistoryShort}
+---
+
+ÚLTIMO MENSAJE DE [CONTACTO] AL QUE [YO] DEBO RESPONDER:
+"${lastMessageText}"
+
+TAREA:
+Redacta la respuesta que [YO] le enviará a [CONTACTO].
+
+REGLAS CRÍTICAS DE ROL Y PERSPECTIVA (OBLIGATORIO):
+1. TÚ ERES [YO], NUNCA eres [CONTACTO].
+2. Respeta estrictamente quién realizó cada acción en el historial:
+   - Si en el historial [YO] envié un correo, certificado, enlace, archivo, servicio o información, recuerda que TÚ ([YO]) eres el EMISOR que lo envió, y [CONTACTO] es el RECEPTOR que lo recibió.
+   - JAMÁS inviertas los papeles diciendo cosas como "Confirmo, lo recibí sin problemas" o "Ya revisé el correo, gracias" cuando fue [YO] quien hizo el envío.
+3. PROHIBIDO parafrasear o ampliar el último mensaje de [CONTACTO] como si lo dijeras tú:
+   - Si [CONTACTO] responde con una confirmación breve como "conforme", "ok", "recibido", "listo" o "gracias", NO conviertas ese "conforme" en "Confirmo que lo recibí sin problemas". En su lugar, responde como [YO] agradeciendo su confirmación y cerrando cordialmente o quedando a su disposición para cualquier consulta (por ejemplo: "¡Perfecto! Muchas gracias por confirmar, quedo atento por si tienes alguna consulta adicional.").
+4. Estilo y tono solicitados: ${baseTone} ${extraTone}
+5. Idioma: Responde en el mismo idioma de la conversación (español por defecto).
+6. Devuelve ÚNICAMENTE el texto final del mensaje para enviar, sin comillas y sin prefijos como "[YO]:" o "Yo:".`;
 }
 
 function triggerEvent() {
@@ -244,7 +396,7 @@ async function generateReplySuggestion() {
     if (!mainNode || !newFooterParagraph) return;
 
     lastActionWasRewrite = false;
-    const { chatHistoryShort, lastIsMine, messageCount } = parseHtml(mainNode, historyCount);
+    const { chatHistoryShort, lastIsMine, messageCount, lastMessageText } = parseHtml(mainNode, historyCount);
 
     const quickToneValue = globalToneSelect ? globalToneSelect.value : 'default';
     const customPromptText = globalCustomPromptInput ? globalCustomPromptInput.value.trim() : '';
@@ -258,11 +410,11 @@ async function generateReplySuggestion() {
         return;
     }
 
-    const prompt = await createPrompt(lastIsMine, chatHistoryShort || '(Sin historial previo)');
+    const prompt = await createPrompt(lastIsMine, chatHistoryShort || '(Sin historial previo)', lastMessageText || '');
     const isCustom = Boolean(quickToneValue === 'custom' && customPromptText);
     const systemInstruction = isCustom
         ? 'Eres un redactor experto para WhatsApp. Tu tarea es convertir las indicaciones e ideas del usuario en un mensaje real, educado y directo para su contacto en primera persona ("Yo"). NUNCA repitas la indicación del usuario textualmente ni uses tercera persona como "dile que...".'
-        : undefined;
+        : 'Eres un asistente experto redactando mensajes de WhatsApp en nombre del usuario ([YO]). SIEMPRE escribes desde la perspectiva de [YO] dirigiéndote a [CONTACTO]. NUNCA adoptes el rol de [CONTACTO], NUNCA respondas como si fueras el destinatario de los mensajes que [YO] envió, y NUNCA parafrasees ni repitas el último mensaje de [CONTACTO] como si lo dijeras tú.';
 
     if (globalGptButtonObject) globalGptButtonObject.setBusy(true);
     writeTextToSuggestionField('', true);
@@ -968,8 +1120,8 @@ function handleAiResponse(response) {
     }
     if (typeof response.text === 'string') {
         const clean = response.text
-            .replace(/^(Me|Yo|Respuesta|Mensaje):\s*/i, '')
-            .replace(/^["'«]|["'»]$/g, '')
+            .replace(/^(\[?YO[^\]]*\]?|\[?CONTACTO[^\]]*\]?|Me|Yo|Respuesta|Mensaje):\s*/i, '')
+            .replace(/^["'«“]|["'»”]$/g, '')
             .trim();
         writeTextToSuggestionField(clean, false);
     }
