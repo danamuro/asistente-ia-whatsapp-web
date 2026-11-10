@@ -755,6 +755,17 @@ html[data-color-scheme="dark"] .gpt-wa-btn-action-bottom:hover {
     align-self: flex-start;
 }
 
+.gpt-wa-audio-transcribe-wrap.is-outgoing {
+    margin-left: auto;
+    margin-right: 62px;
+    align-self: flex-end;
+    align-items: flex-end;
+}
+
+.gpt-wa-audio-transcribe-wrap.is-outgoing .gpt-wa-audio-actions-row {
+    justify-content: flex-end;
+}
+
 /* Prevenir que se renderice en el footer o barra de mensajes de WhatsApp */
 footer .gpt-wa-audio-transcribe-wrap,
 #gpt-wa-custom-bar .gpt-wa-audio-transcribe-wrap,

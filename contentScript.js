@@ -726,8 +726,20 @@ function requestAudioBlobFromPage(messageId) {
     });
 }
 
+function syncAudioWrapDirection(rowEl, wrapEl, mainNode, activeChatTitle = '') {
+    if (!rowEl || !wrapEl) return false;
+    const refMain = mainNode || document.getElementById('main') || globalMainNode;
+    const chatTitle = activeChatTitle || getActiveChatSignature(refMain);
+    const outgoing = typeof isOutgoingMessage === 'function'
+        ? isOutgoingMessage(rowEl, refMain, chatTitle)
+        : rowEl.classList.contains('message-out') || Boolean(rowEl.closest('.message-out'));
+    wrapEl.classList.toggle('is-outgoing', Boolean(outgoing));
+    return Boolean(outgoing);
+}
+
 function renderAudioTranscriptUI(rowEl, wrapEl, messageId, transcriptText, isError = false) {
     wrapEl.innerHTML = '';
+    syncAudioWrapDirection(rowEl, wrapEl);
 
     const box = document.createElement('div');
     box.className = isError
@@ -771,6 +783,7 @@ function renderAudioTranscriptUI(rowEl, wrapEl, messageId, transcriptText, isErr
 
 async function handleTranscribeAudioClick(rowEl, wrapEl, messageId) {
     wrapEl.innerHTML = '';
+    syncAudioWrapDirection(rowEl, wrapEl);
     const loadingBtn = document.createElement('button');
     loadingBtn.type = 'button';
     loadingBtn.className = 'gpt-wa-audio-btn';
@@ -847,6 +860,8 @@ function scanAndInjectAudioButtons(rootNode) {
     const mainNode = rootNode || document.getElementById('main') || globalMainNode;
     if (!mainNode) return;
 
+    const activeChatTitle = getActiveChatSignature(mainNode);
+
     // Limpiar cualquier botón de transcripción que se haya colado por error en el footer o en la barra de WhatsApp
     document.querySelectorAll('footer .gpt-wa-audio-transcribe-wrap, #gpt-wa-custom-bar .gpt-wa-audio-transcribe-wrap, [data-testid="conversation-footer"] .gpt-wa-audio-transcribe-wrap, [data-testid="compose-box"] .gpt-wa-audio-transcribe-wrap').forEach((el) => {
         el.remove();
@@ -892,6 +907,7 @@ function scanAndInjectAudioButtons(rootNode) {
         const messageId = getVoiceMessageId(rowEl);
 
         if (existingWrap) {
+            syncAudioWrapDirection(rowEl, existingWrap, mainNode, activeChatTitle);
             if (messageId && audioTranscriptsCache.has(messageId) && !existingWrap.querySelector('.gpt-wa-audio-transcript-box')) {
                 const cachedText = audioTranscriptsCache.get(messageId);
                 renderAudioTranscriptUI(rowEl, existingWrap, messageId, cachedText, false);
@@ -901,6 +917,7 @@ function scanAndInjectAudioButtons(rootNode) {
 
         const wrap = document.createElement('div');
         wrap.className = 'gpt-wa-audio-transcribe-wrap';
+        syncAudioWrapDirection(rowEl, wrap, mainNode, activeChatTitle);
 
         if (messageId && audioTranscriptsCache.has(messageId)) {
             const cachedText = audioTranscriptsCache.get(messageId);

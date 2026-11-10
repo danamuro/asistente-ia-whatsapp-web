@@ -92,7 +92,11 @@ function isOutgoingMessage(el, mainNode, activeChatTitle = '') {
     try {
         const refMain = mainNode || document.getElementById('main');
         const bubbleEl =
-            (el.querySelector && el.querySelector('[data-pre-plain-text], .copyable-text, .selectable-text')) || el;
+            (el.querySelector &&
+                el.querySelector(
+                    '[data-pre-plain-text], .copyable-text:not(.gpt-wa-audio-transcript-box), .selectable-text:not(.gpt-wa-audio-transcript-box), [role="slider"], input[type="range"], audio'
+                )) ||
+            el;
         if (refMain && bubbleEl && bubbleEl.getBoundingClientRect) {
             const mainRect = refMain.getBoundingClientRect();
             const bubbleRect = bubbleEl.getBoundingClientRect();
