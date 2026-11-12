@@ -20,6 +20,7 @@ jobs:
       - name: Validar sintaxis de archivos JavaScript y manifest.json
         run: |
           node --check background.js
+          node --check audioInterceptor.js
           node --check parser.js
           node --check uiStuff.js
           node --check contentScript.js
@@ -33,10 +34,12 @@ jobs:
           zip -r "Asistente-IA-WhatsApp-Pro-v${VERSION}.zip" \
             manifest.json \
             background.js \
+            audioInterceptor.js \
             parser.js \
             uiStuff.js \
             contentScript.js \
             content.css \
+            Instalar-Asistente-IA.bat \
             fonts/ \
             icons/ \
             options/
@@ -55,7 +58,9 @@ jobs:
           name: "Asistente IA para WhatsApp™ Web v${{ env.VERSION }}"
           body: |
             ### Descarga directa lista para instalar
-            Descarga el archivo **`Asistente-IA-WhatsApp-Pro.zip`** de abajo, descomprímelo en una carpeta y cárgalo en `chrome://extensions` u `opera://extensions` usando **Cargar descomprimida** (*Modo de desarrollador*).
+            1. Descarga **`Asistente-IA-WhatsApp-Pro.zip`** y descomprímelo en tu PC.
+            2. *(Windows — Recomendado)* Haz doble clic en **`Instalar-Asistente-IA.bat`** para copiar la extensión a una carpeta segura, copiar su ruta al portapapeles y abrir directamente la página de extensiones de tu navegador.
+            3. Activa **Modo de desarrollador**, haz clic en **Cargar descomprimida**, presiona **`Ctrl + V`** y selecciona la carpeta.
           files: |
             Asistente-IA-WhatsApp-Pro.zip
             Asistente-IA-WhatsApp-Pro-v${{ env.VERSION }}.zip

@@ -35,7 +35,74 @@
         </div>
     </div>
 
+    <div id="onboarding-banner" class="onboarding-banner" style="display: none;">
+        <div class="onboarding-header">
+            <span class="onboarding-badge">¡Bienvenido! Configuración inicial</span>
+            <h2>Elige qué funciones quieres usar en WhatsApp Web</h2>
+            <p>
+                Puedes activar <strong>ambas funciones</strong> o usar <strong>solo una</strong> de forma independiente.
+                Más adelante podrás activar, desactivar o cambiar esta selección en cualquier momento haciendo clic en el icono de la extensión.
+            </p>
+        </div>
+        <div class="onboarding-presets" role="group" aria-label="Selección rápida de funcionalidades">
+            <button type="button" class="preset-mode-btn active" data-mode="both">
+                <strong>Ambas funciones</strong>
+                <span>Transcripción + Texto con IA</span>
+            </button>
+            <button type="button" class="preset-mode-btn" data-mode="audio-only">
+                <strong>Solo Transcripción</strong>
+                <span>Notas de voz a texto</span>
+            </button>
+            <button type="button" class="preset-mode-btn" data-mode="text-only">
+                <strong>Solo Texto con IA</strong>
+                <span>Respuestas, tono y mejora</span>
+            </button>
+        </div>
+        <p class="onboarding-step-note">
+            Luego, configura tu API Key gratuita abajo y pulsa <b>Guardar Configuración</b>.
+        </p>
+    </div>
+
     <form id="options-form">
+        <fieldset>
+            <legend>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="24" y="64" width="208" height="128" rx="64"/>
+                    <circle cx="168" cy="128" r="32"/>
+                </svg>
+                <span>1. Funcionalidades Activas</span>
+            </legend>
+            <p class="section-hint">Activa o desactiva cada función de forma independiente según lo que necesites:</p>
+
+            <div class="feature-toggle-list">
+                <label class="feature-toggle-card" for="toggle-audio-transcription">
+                    <div class="feature-info">
+                        <span class="feature-title">Transcripción de Audios con IA</span>
+                        <span class="feature-desc">Añade un botón en cada nota de voz para convertir el audio a texto al instante.</span>
+                    </div>
+                    <span class="switch">
+                        <input type="checkbox" id="toggle-audio-transcription" checked>
+                        <span class="slider"></span>
+                    </span>
+                </label>
+
+                <label class="feature-toggle-card" for="toggle-text-ai">
+                    <div class="feature-info">
+                        <span class="feature-title">Asistente de Texto con IA</span>
+                        <span class="feature-desc">Muestra la barra inferior para generar respuestas, cambiar tono y mejorar o traducir mensajes.</span>
+                    </div>
+                    <span class="switch">
+                        <input type="checkbox" id="toggle-text-ai" checked>
+                        <span class="slider"></span>
+                    </span>
+                </label>
+            </div>
+
+            <div id="features-off-warning" class="features-warning" style="display: none;">
+                Ambas funciones están desactivadas. Activa al menos una para usar la extensión en WhatsApp Web.
+            </div>
+        </fieldset>
+
         <fieldset>
             <legend>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
@@ -50,7 +117,7 @@
                     <line x1="16" y1="104" x2="48" y2="104"/>
                     <line x1="16" y1="152" x2="48" y2="152"/>
                 </svg>
-                <span>1. Motor de IA (100% Gratis)</span>
+                <span>2. Motor de IA (100% Gratis)</span>
             </legend>
 
             <label for="provider-select">Proveedor de Inteligencia Artificial:</label>
@@ -88,7 +155,7 @@
             </div>
         </fieldset>
 
-        <fieldset>
+        <fieldset id="fieldset-trigger-mode">
             <legend>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="148" y1="172" x2="40" y2="172"/>
@@ -98,7 +165,7 @@
                     <line x1="216" y1="84" x2="124" y2="84"/>
                     <circle cx="104" cy="84" r="20"/>
                 </svg>
-                <span>2. Modo de disparo en WhatsApp Web</span>
+                <span>3. Modo de disparo (Asistente de Texto)</span>
             </legend>
             <div class="radio-group">
                 <label class="radio-option">
@@ -112,14 +179,14 @@
             </div>
         </fieldset>
 
-        <fieldset>
+        <fieldset id="fieldset-tone">
             <legend>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M45.4,177A95.9,95.9,0,1,1,79,210.6h0L45.8,220a7.9,7.9,0,0,1-9.8-9.8L45.4,177Z"/>
                     <line x1="96" y1="112" x2="160" y2="112"/>
                     <line x1="96" y1="144" x2="136" y2="144"/>
                 </svg>
-                <span>3. Tu Tono de Voz / Estilo Personal</span>
+                <span>4. Tu Tono de Voz / Estilo Personal (Asistente de Texto)</span>
             </legend>
             <label for="tone-of-voice">Instrucciones base para tu estilo al responder:</label>
             <textarea id="tone-of-voice" name="tone-of-voice" rows="3" placeholder="Ej: Usa mi propio estilo de escritura, responde en mi mismo idioma, sé conciso y natural."></textarea>

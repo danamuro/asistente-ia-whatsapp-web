@@ -25,10 +25,11 @@ Extensión ligera y rápida para **WhatsApp™ Web** que genera sugerencias de r
 
 1. Ve a la sección **[Releases](../../releases)** de este repositorio y descarga el archivo **`Asistente-IA-WhatsApp-Pro.zip`** (o clona este repositorio con `git clone`).
 2. Descomprime el archivo `.zip` en una carpeta de tu computadora.
-3. Abre la página de extensiones de tu navegador (`opera://extensions`, `chrome://extensions`, `edge://extensions` o `brave://extensions`).
-4. Activa el **Modo de desarrollador** (arriba a la derecha).
-5. Haz clic en **Cargar descomprimida** (*Load unpacked*) y selecciona la carpeta extraída.
-6. Haz clic en el icono de la extensión en la barra del navegador, pega tu API Key gratuita de **Groq** o **Google Gemini** y presiona **Guardar Configuración**.
+3. **Instalación guiada en Windows (Recomendado):** Haz doble clic en **`Instalar-Asistente-IA.bat`** dentro de la carpeta extraída. El asistente copiará los archivos a una ruta fija (`%LOCALAPPDATA%\Asistente-IA-WhatsApp-Pro`), copiará esa ruta al portapapeles y abrirá la página de extensiones de tu navegador.
+4. En la página de extensiones (`chrome://extensions`, `edge://extensions`, `brave://extensions` u `opera://extensions`):
+   - Activa el **Modo de desarrollador** (arriba a la derecha).
+   - Haz clic en **Cargar descomprimida** (*Load unpacked*), pega la ruta con `Ctrl + V` (si usaste el `.bat`) y selecciona la carpeta.
+5. Al instalarse, se abrirá la pantalla de bienvenida para elegir si deseas activar **ambas funciones** (Transcripción de Audios + Asistente de Texto) o **solo una**, y configurar tu API Key gratuita de **Groq** o **Google Gemini**.
 
 ## Publicación automática
 

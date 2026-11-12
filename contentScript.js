@@ -2,6 +2,8 @@
 
 let sendHistory = 'manual';
 let historyCount = 10;
+let enableTextAI = true;
+let enableAudioTranscription = true;
 let globalMainNode = null;
 let newFooterParagraph = null;
 let globalSuggestionIconCol = null;
@@ -37,7 +39,7 @@ try {
                 }
             });
             const mainNode = document.getElementById('main') || globalMainNode;
-            if (mainNode) {
+            if (mainNode && enableAudioTranscription) {
                 scanAndInjectAudioButtons(mainNode);
             }
         }
@@ -66,6 +68,31 @@ function saveTranscriptToCache(messageId, transcriptText) {
     } catch (_) {}
 }
 
+function applyFeatureToggles() {
+    if (!enableTextAI) {
+        const existingBar = document.getElementById('gpt-wa-custom-bar');
+        if (existingBar) {
+            existingBar.remove();
+        }
+        newFooterParagraph = null;
+        globalSuggestionIconCol = null;
+        globalGptButtonObject = null;
+        globalToneSelect = null;
+        globalCustomPromptInput = null;
+        globalRewriteSelect = null;
+        globalRewriteButton = null;
+        document.querySelectorAll('.gpt-wa-audio-reply-btn').forEach((btn) => btn.remove());
+    } else {
+        ensureGptBarMounted();
+    }
+
+    if (!enableAudioTranscription) {
+        document.querySelectorAll('.gpt-wa-audio-transcribe-wrap').forEach((el) => el.remove());
+    } else {
+        scanAndInjectAudioButtons();
+    }
+}
+
 function readData() {
     try {
         chrome.storage.local.get({
@@ -73,10 +100,15 @@ function readData() {
             geminiKey: '',
             groqKey: '',
             sendHistory: 'manual',
-            historyCount: 10
+            historyCount: 10,
+            enableTextAI: true,
+            enableAudioTranscription: true
         }, (result) => {
             sendHistory = result.sendHistory || 'manual';
             historyCount = Number(result.historyCount) || 10;
+            enableTextAI = result.enableTextAI !== false;
+            enableAudioTranscription = result.enableAudioTranscription !== false;
+            applyFeatureToggles();
         });
     } catch (e) {
         console.error('Error leyendo configuración:', e);
@@ -86,11 +118,23 @@ function readData() {
 readData();
 
 chrome.storage.local.onChanged.addListener((changes) => {
+    let togglesChanged = false;
     if (changes.sendHistory) {
         sendHistory = changes.sendHistory.newValue;
     }
     if (changes.historyCount) {
         historyCount = Number(changes.historyCount.newValue) || 10;
+    }
+    if (changes.enableTextAI) {
+        enableTextAI = changes.enableTextAI.newValue !== false;
+        togglesChanged = true;
+    }
+    if (changes.enableAudioTranscription) {
+        enableAudioTranscription = changes.enableAudioTranscription.newValue !== false;
+        togglesChanged = true;
+    }
+    if (togglesChanged) {
+        applyFeatureToggles();
     }
 });
 
@@ -383,6 +427,7 @@ REGLAS CRÍTICAS DE ROL Y PERSPECTIVA (OBLIGATORIO):
 }
 
 function triggerEvent() {
+    if (!enableTextAI) return;
     if (delayTimer) {
         clearTimeout(delayTimer);
     }
@@ -392,6 +437,7 @@ function triggerEvent() {
 }
 
 async function generateReplySuggestion() {
+    if (!enableTextAI) return;
     const mainNode = document.getElementById('main') || globalMainNode;
     if (!mainNode || !newFooterParagraph) return;
 
@@ -442,6 +488,7 @@ async function generateReplySuggestion() {
 }
 
 async function handleRewriteClick() {
+    if (!enableTextAI) return;
     const mainNode = document.getElementById('main') || globalMainNode;
     if (!mainNode || !newFooterParagraph) return;
 
@@ -587,20 +634,26 @@ function ensureGptBarMounted() {
     const currentSignature = getActiveChatSignature(mainNode);
     const existingBar = document.getElementById('gpt-wa-custom-bar');
 
-    if (!existingBar) {
-        mountGptBar(footer, mainNode);
-        lastChatSignature = currentSignature;
-    } else if (currentSignature && currentSignature !== lastChatSignature) {
-        lastChatSignature = currentSignature;
-        lastActionWasRewrite = false;
-        if (sendHistory === 'auto') {
-            triggerEvent();
-        } else {
-            maybeShowInitialHint();
+    if (enableTextAI) {
+        if (!existingBar) {
+            mountGptBar(footer, mainNode);
+            lastChatSignature = currentSignature;
+        } else if (currentSignature && currentSignature !== lastChatSignature) {
+            lastChatSignature = currentSignature;
+            lastActionWasRewrite = false;
+            if (sendHistory === 'auto') {
+                triggerEvent();
+            } else {
+                maybeShowInitialHint();
+            }
         }
+    } else if (existingBar) {
+        existingBar.remove();
     }
 
-    scanAndInjectAudioButtons(mainNode);
+    if (enableAudioTranscription) {
+        scanAndInjectAudioButtons(mainNode);
+    }
 }
 
 function isVoiceMessageRow(rowEl) {
@@ -755,17 +808,19 @@ function renderAudioTranscriptUI(rowEl, wrapEl, messageId, transcriptText, isErr
         rowEl.setAttribute('data-gpt-transcript', transcriptText);
         saveTranscriptToCache(messageId, transcriptText);
 
-        const replyBtn = document.createElement('button');
-        replyBtn.type = 'button';
-        replyBtn.className = 'gpt-wa-audio-mini-btn';
-        replyBtn.innerHTML = `${CS_PH_BOLD.sparkle}<span>Responder con IA</span>`;
-        replyBtn.title = 'Sugerir una respuesta a este audio en la barra inferior';
-        replyBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            triggerEvent();
-        });
+        if (enableTextAI) {
+            const replyBtn = document.createElement('button');
+            replyBtn.type = 'button';
+            replyBtn.className = 'gpt-wa-audio-mini-btn gpt-wa-audio-reply-btn';
+            replyBtn.innerHTML = `${CS_PH_BOLD.sparkle}<span>Responder con IA</span>`;
+            replyBtn.title = 'Sugerir una respuesta a este audio en la barra inferior';
+            replyBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                triggerEvent();
+            });
 
-        actionsRow.appendChild(replyBtn);
+            actionsRow.appendChild(replyBtn);
+        }
     } else {
         const retryBtn = document.createElement('button');
         retryBtn.type = 'button';
@@ -857,6 +912,7 @@ async function handleTranscribeAudioClick(rowEl, wrapEl, messageId) {
 }
 
 function scanAndInjectAudioButtons(rootNode) {
+    if (!enableAudioTranscription) return;
     const mainNode = rootNode || document.getElementById('main') || globalMainNode;
     if (!mainNode) return;
 
@@ -1065,11 +1121,11 @@ const observer = new MutationObserver((mutations) => {
     if (shouldCheckBar) {
         ensureGptBarMounted();
     }
-    if (newRowAdded) {
+    if (newRowAdded && enableAudioTranscription) {
         scanAndInjectAudioButtons();
     }
 
-    if (newRowAdded && sendHistory === 'auto') {
+    if (newRowAdded && enableTextAI && sendHistory === 'auto') {
         triggerEvent();
     }
 });

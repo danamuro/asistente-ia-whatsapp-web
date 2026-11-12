@@ -96,18 +96,22 @@ async function fetchLiveGeminiModels(apiKey) {
                     !n.includes('tts') &&
                     !n.includes('vision') &&
                     !n.includes('aqa') &&
-                    !n.includes('1.0')
+                    !n.includes('1.0') &&
+                    n !== 'gemini-2.5-pro'
                 );
             });
 
         const priority = [
             'gemini-2.5-flash',
             'gemini-2.5-flash-lite',
+            'gemini-3-flash',
+            'gemini-3.1-flash',
+            'gemini-3.1-pro',
+            'gemini-3-pro',
+            'gemini-3',
             'gemini-2.0-flash',
             'gemini-1.5-flash',
-            'gemini-1.5-flash-8b',
-            'gemini-2.5-pro',
-            'gemini-3'
+            'gemini-1.5-flash-8b'
         ];
         return models.sort((a, b) => {
             let aIdx = priority.findIndex((p) => a.startsWith(p));
@@ -121,26 +125,34 @@ async function fetchLiveGeminiModels(apiKey) {
     }
 }
 
+function normalizeGeminiModel(modelName) {
+    if (!modelName) return '';
+    if (modelName === 'gemini-2.5-pro') return 'gemini-3.1-pro-preview';
+    return modelName;
+}
+
 async function callGeminiAPI(apiKey, prompt, systemInstruction, preferredModel) {
+    const normalizedPreferred = normalizeGeminiModel(preferredModel);
     const liveModels = await fetchLiveGeminiModels(apiKey);
 
     let candidateModels = [];
     if (liveModels.length > 0) {
-        if (preferredModel && liveModels.includes(preferredModel)) {
-            candidateModels = [preferredModel, ...liveModels.filter((m) => m !== preferredModel)];
+        if (normalizedPreferred && liveModels.includes(normalizedPreferred)) {
+            candidateModels = [normalizedPreferred, ...liveModels.filter((m) => m !== normalizedPreferred)];
         } else {
             candidateModels = liveModels;
         }
     } else {
         candidateModels = [
-            preferredModel && preferredModel.startsWith('gemini') ? preferredModel : 'gemini-2.5-flash',
+            normalizedPreferred && normalizedPreferred.startsWith('gemini') ? normalizedPreferred : 'gemini-2.5-flash',
             'gemini-2.5-flash-lite',
-            'gemini-2.0-flash',
-            'gemini-1.5-flash'
+            'gemini-3-flash-preview',
+            'gemini-3.1-pro-preview',
+            'gemini-2.0-flash'
         ];
     }
 
-    const uniqueModels = [...new Set(candidateModels)].slice(0, 5);
+    const uniqueModels = [...new Set(candidateModels)].slice(0, 6);
     const fullPrompt = systemInstruction ? `${systemInstruction}\n\n${prompt}` : prompt;
 
     let lastStatus = 0;
@@ -408,16 +420,17 @@ async function transcribeWithGemini(apiKey, base64Audio, mimeType, preferredMode
     const cleanBase64 = (base64Audio || '').replace(/^data:[^;]+;base64,/, '');
     const cleanMime = (mimeType || 'audio/ogg').split(';')[0].trim() || 'audio/ogg';
 
+    const normalizedPreferred = normalizeGeminiModel(preferredModel);
     const liveModels = await fetchLiveGeminiModels(cleanKey);
     const candidateModels =
         liveModels.length > 0
             ? [
-                  ...(preferredModel && liveModels.includes(preferredModel) ? [preferredModel] : []),
-                  ...liveModels.filter((m) => m !== preferredModel)
+                  ...(normalizedPreferred && liveModels.includes(normalizedPreferred) ? [normalizedPreferred] : []),
+                  ...liveModels.filter((m) => m !== normalizedPreferred)
               ]
-            : ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+            : ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3-flash-preview', 'gemini-3.1-pro-preview', 'gemini-2.0-flash'];
 
-    const uniqueModels = [...new Set(candidateModels)].slice(0, 4);
+    const uniqueModels = [...new Set(candidateModels)].slice(0, 5);
     let lastStatus = 0;
     let lastErrorMsg = '';
 
@@ -580,6 +593,32 @@ async function checkForUpdatesAutomatically() {
 // Comprobar actualizaciones automáticamente al iniciar la extensión y periódicamente
 checkForUpdatesAutomatically();
 
+chrome.runtime.onInstalled.addListener((details) => {
+    if (details.reason === 'install') {
+        chrome.storage.local.get(
+            {
+                enableTextAI: true,
+                enableAudioTranscription: true,
+                onboardingCompleted: false
+            },
+            (current) => {
+                chrome.storage.local.set(
+                    {
+                        enableTextAI: current.enableTextAI !== false,
+                        enableAudioTranscription: current.enableAudioTranscription !== false,
+                        onboardingCompleted: Boolean(current.onboardingCompleted)
+                    },
+                    () => {
+                        chrome.tabs.create({
+                            url: chrome.runtime.getURL('options/options.html?onboarding=1')
+                        });
+                    }
+                );
+            }
+        );
+    }
+});
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'openOptionsPage') {
         chrome.runtime.openOptionsPage();
@@ -601,25 +640,46 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     if (request.message === 'sendChatToGpt') {
-        generateAIResponse(request.prompt, request.systemInstruction)
-            .then((response) => {
-                if (sender && sender.tab && sender.tab.id) {
-                    chrome.tabs.sendMessage(sender.tab.id, {
-                        message: 'gptResponse',
-                        response: response,
-                        requestType: request.requestType || 'reply'
-                    }).catch(() => {});
-                }
-                sendResponse(response);
-            });
+        chrome.storage.local.get({ enableTextAI: true }).then((flags) => {
+            if (!flags.enableTextAI) {
+                const disabledRes = {
+                    error: {
+                        message: 'El Asistente de Texto con IA está desactivado en la configuración de la extensión.'
+                    }
+                };
+                sendResponse(disabledRes);
+                return;
+            }
+            return generateAIResponse(request.prompt, request.systemInstruction)
+                .then((response) => {
+                    if (sender && sender.tab && sender.tab.id) {
+                        chrome.tabs.sendMessage(sender.tab.id, {
+                            message: 'gptResponse',
+                            response: response,
+                            requestType: request.requestType || 'reply'
+                        }).catch(() => {});
+                    }
+                    sendResponse(response);
+                });
+        });
         return true;
     }
 
     if (request.message === 'transcribeAudio') {
-        transcribeAudioResponse(request.base64Audio, request.mimeType)
-            .then((response) => {
-                sendResponse(response);
-            });
+        chrome.storage.local.get({ enableAudioTranscription: true }).then((flags) => {
+            if (!flags.enableAudioTranscription) {
+                sendResponse({
+                    error: {
+                        message: 'La Transcripción de Audios está desactivada en la configuración de la extensión.'
+                    }
+                });
+                return;
+            }
+            return transcribeAudioResponse(request.base64Audio, request.mimeType)
+                .then((response) => {
+                    sendResponse(response);
+                });
+        });
         return true;
     }
 });

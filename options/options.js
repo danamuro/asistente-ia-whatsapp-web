@@ -39,10 +39,11 @@ const PROVIDER_CONFIG = {
             2. Haz clic en <b>"Create API key"</b> → <b>"Create API key in new project"</b>, cópiala y pégala abajo.
         `,
         models: [
-            { value: '', label: 'Automático (Detectar el mejor Gemini Flash activo)' },
+            { value: '', label: 'Automático (Detectar el mejor Gemini activo)' },
             { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Gratis — Rápido y muy inteligente)' },
-            { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (Gratis — Estable y veloz)' },
-            { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash (Gratis — Alta compatibilidad)' }
+            { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview (Gratis — Última generación)' },
+            { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview (Gratis — Máxima capacidad)' },
+            { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (Gratis — Estable y veloz)' }
         ]
     }
 };
@@ -65,6 +66,68 @@ const closeAlertButton = document.getElementById('hideHistoryWarningAlert');
 const toggleKeyBtn = document.getElementById('toggle-key-btn');
 const testApiBtn = document.getElementById('test-api-btn');
 const testStatusBox = document.getElementById('test-status');
+const onboardingBanner = document.getElementById('onboarding-banner');
+const toggleAudioTranscription = document.getElementById('toggle-audio-transcription');
+const toggleTextAI = document.getElementById('toggle-text-ai');
+const featuresOffWarning = document.getElementById('features-off-warning');
+const fieldsetTriggerMode = document.getElementById('fieldset-trigger-mode');
+const fieldsetTone = document.getElementById('fieldset-tone');
+const presetModeBtns = document.querySelectorAll('.preset-mode-btn');
+
+function syncFeatureTogglesUI(persistImmediately = false) {
+    const audioOn = toggleAudioTranscription ? toggleAudioTranscription.checked : true;
+    const textOn = toggleTextAI ? toggleTextAI.checked : true;
+
+    if (featuresOffWarning) {
+        featuresOffWarning.style.display = !audioOn && !textOn ? 'block' : 'none';
+    }
+    if (fieldsetTriggerMode) {
+        fieldsetTriggerMode.classList.toggle('fieldset-dimmed', !textOn);
+    }
+    if (fieldsetTone) {
+        fieldsetTone.classList.toggle('fieldset-dimmed', !textOn);
+    }
+
+    presetModeBtns.forEach((btn) => {
+        const mode = btn.getAttribute('data-mode');
+        const isActive =
+            (mode === 'both' && audioOn && textOn) ||
+            (mode === 'audio-only' && audioOn && !textOn) ||
+            (mode === 'text-only' && !audioOn && textOn);
+        btn.classList.toggle('active', isActive);
+    });
+
+    if (persistImmediately) {
+        chrome.storage.local.set({
+            enableAudioTranscription: audioOn,
+            enableTextAI: textOn
+        });
+    }
+}
+
+if (toggleAudioTranscription) {
+    toggleAudioTranscription.addEventListener('change', () => syncFeatureTogglesUI(true));
+}
+if (toggleTextAI) {
+    toggleTextAI.addEventListener('change', () => syncFeatureTogglesUI(true));
+}
+
+presetModeBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+        const mode = btn.getAttribute('data-mode');
+        if (mode === 'both') {
+            toggleAudioTranscription.checked = true;
+            toggleTextAI.checked = true;
+        } else if (mode === 'audio-only') {
+            toggleAudioTranscription.checked = true;
+            toggleTextAI.checked = false;
+        } else if (mode === 'text-only') {
+            toggleAudioTranscription.checked = false;
+            toggleTextAI.checked = true;
+        }
+        syncFeatureTogglesUI(true);
+    });
+});
 
 // Inicializar icono Phosphor Bold en el botón de mostrar/ocultar contraseña
 toggleKeyBtn.innerHTML = OPT_PH_BOLD.eye;
@@ -232,6 +295,8 @@ function saveOptions(e) {
     const historyCount = Math.min(30, Math.max(2, Number(document.getElementById('history-count').value) || 10));
     const sendHistory = document.querySelector('input[name="send-history"]:checked').value;
     const toneOfVoice = document.getElementById('tone-of-voice').value.trim();
+    const enableAudioTranscription = toggleAudioTranscription ? toggleAudioTranscription.checked : true;
+    const enableTextAI = toggleTextAI ? toggleTextAI.checked : true;
 
     chrome.storage.local.set({
         apiChoice: provider,
@@ -241,8 +306,14 @@ function saveOptions(e) {
         model: model,
         historyCount: historyCount,
         sendHistory: sendHistory,
-        toneOfVoice: toneOfVoice || 'Usa mi propio estilo de escritura con naturalidad. Sé conciso.'
+        toneOfVoice: toneOfVoice || 'Usa mi propio estilo de escritura con naturalidad. Sé conciso.',
+        enableAudioTranscription: enableAudioTranscription,
+        enableTextAI: enableTextAI,
+        onboardingCompleted: true
     }, () => {
+        if (onboardingBanner) {
+            onboardingBanner.style.display = 'none';
+        }
         const toast = document.getElementById('save-toast');
         toast.style.display = 'block';
         setTimeout(() => {
@@ -260,7 +331,10 @@ function restoreOptions() {
         model: '',
         historyCount: 10,
         sendHistory: 'manual',
-        toneOfVoice: 'Usa mi propio estilo de escritura con naturalidad. Sé conciso.'
+        toneOfVoice: 'Usa mi propio estilo de escritura con naturalidad. Sé conciso.',
+        enableAudioTranscription: true,
+        enableTextAI: true,
+        onboardingCompleted: false
     }, (items) => {
         const rawGem = items.geminiKey || (items.apiKey.startsWith('AIza') ? items.apiKey : '');
         const rawGroq = items.groqKey || (items.apiKey.startsWith('gsk_') ? items.apiKey : '');
@@ -273,7 +347,22 @@ function restoreOptions() {
         if (provider !== 'groq' && provider !== 'gemini') provider = 'groq';
 
         providerSelect.value = provider;
-        updateProviderUI(provider, items.model);
+        const normalizedModel = items.model === 'gemini-2.5-pro' ? 'gemini-3.1-pro-preview' : items.model;
+        updateProviderUI(provider, normalizedModel);
+
+        if (toggleAudioTranscription) {
+            toggleAudioTranscription.checked = items.enableAudioTranscription !== false;
+        }
+        if (toggleTextAI) {
+            toggleTextAI.checked = items.enableTextAI !== false;
+        }
+        syncFeatureTogglesUI(false);
+
+        const params = new URLSearchParams(window.location.search);
+        const isOnboarding = params.get('onboarding') === '1' || !items.onboardingCompleted;
+        if (onboardingBanner) {
+            onboardingBanner.style.display = isOnboarding ? 'block' : 'none';
+        }
 
         document.getElementById('history-count').value = items.historyCount || 10;
         document.getElementById('tone-of-voice').value = items.toneOfVoice;

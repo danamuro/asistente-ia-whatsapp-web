@@ -460,3 +460,199 @@ textarea:focus {
 .repo-link:hover {
     text-decoration: underline;
 }
+
+/* Onboarding / Configuración Inicial */
+.onboarding-banner {
+    background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+    border: 1.5px solid #6ee7b7;
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 10px rgba(0, 168, 132, 0.08);
+}
+
+.onboarding-badge {
+    display: inline-block;
+    background-color: #00a884;
+    color: #ffffff;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 12px;
+    margin-bottom: 6px;
+}
+
+.onboarding-header h2 {
+    font-size: 16.5px;
+    color: #065f46;
+    margin-bottom: 4px;
+}
+
+.onboarding-header p {
+    font-size: 13px;
+    color: #1e293b;
+    margin-bottom: 12px;
+}
+
+.onboarding-presets {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.preset-mode-btn {
+    background-color: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 9px 10px;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    transition: all 0.15s ease;
+    font-family: inherit;
+}
+
+.preset-mode-btn strong {
+    font-size: 12.5px;
+    color: #111b21;
+}
+
+.preset-mode-btn span {
+    font-size: 11.5px;
+    color: #64748b;
+}
+
+.preset-mode-btn:hover {
+    border-color: #00a884;
+    background-color: #f8fafc;
+}
+
+.preset-mode-btn.active {
+    border-color: #00a884;
+    background-color: #d9fdd3;
+    box-shadow: 0 0 0 1px #00a884;
+}
+
+.preset-mode-btn.active strong {
+    color: #005c4b;
+}
+
+.onboarding-step-note {
+    font-size: 12.5px;
+    color: #065f46;
+    margin: 0;
+}
+
+/* Interruptores de Funcionalidades */
+.section-hint {
+    font-size: 12.5px;
+    color: #64748b;
+    margin-bottom: 10px;
+}
+
+.feature-toggle-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.feature-toggle-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background-color: #f8fafc;
+    cursor: pointer;
+    margin-bottom: 0;
+    transition: border-color 0.15s, background-color 0.15s;
+}
+
+.feature-toggle-card:hover {
+    border-color: #bce5a7;
+    background-color: #f4fbf6;
+}
+
+.feature-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.feature-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #111b21;
+}
+
+.feature-desc {
+    font-size: 12px;
+    font-weight: 400;
+    color: #54656f;
+    line-height: 1.35;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: #cbd5e1;
+    border-radius: 24px;
+    transition: background-color 0.2s;
+}
+
+.slider::before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: #ffffff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.switch input:checked + .slider {
+    background-color: #00a884;
+}
+
+.switch input:checked + .slider::before {
+    transform: translateX(20px);
+}
+
+.features-warning {
+    margin-top: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background-color: #fefce8;
+    border: 1px solid #fef08a;
+    color: #854d0e;
+    font-size: 12.5px;
+    font-weight: 500;
+}
+
+.fieldset-dimmed {
+    opacity: 0.55;
+    transition: opacity 0.2s;
+}
