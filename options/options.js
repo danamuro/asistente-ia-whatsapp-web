@@ -207,8 +207,9 @@ testApiBtn.addEventListener('click', () => {
         }
         if (response && response.error) {
             testStatusBox.className = 'test-status err';
-            testStatusBox.innerHTML = `${OPT_PH_BOLD.xCircle}<span>${response.error.message}</span>`;
-        } else if (response && response.text) {
+            const errMsg = response.error.message || (typeof response.error === 'string' ? response.error : 'Error al verificar la clave.');
+            testStatusBox.innerHTML = `${OPT_PH_BOLD.xCircle}<span>${errMsg}</span>`;
+        } else if (response && (response.ok || response.text)) {
             if (Array.isArray(response.availableModels) && response.availableModels.length > 0) {
                 modelSelect.innerHTML = '';
                 const autoOpt = document.createElement('option');

@@ -15,9 +15,9 @@ const PROVIDERS = {
         label: 'Pega tu API Key de Groq (comienza por gsk_…):',
         placeholder: 'gsk_…',
         instructions: `
-            <strong>⚡ 100% GRATIS y Ultrarrápido (Sin tarjeta):</strong><br>
-            1. Abre <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer">Groq Console (console.groq.com/keys)</a> e inicia sesión con Google.<br>
-            2. Haz clic en <b>"Create API Key"</b>, escribe cualquier nombre, cópiala y pégala abajo.
+            <strong>⚡ 100% GRATIS y Ultrarrápido (Sin tarjeta bancaria):</strong><br>
+            1. Abre <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer">Groq Console (console.groq.com/keys)</a> e inicia sesión con tu cuenta de Google.<br>
+            2. Haz clic en <b>"Create API Key"</b>, dale cualquier nombre, cópiala y pégala aquí abajo.
         `
     },
     gemini: {
@@ -25,13 +25,14 @@ const PROVIDERS = {
         label: 'Pega tu API Key de Google Gemini (comienza por AIza…):',
         placeholder: 'AIzaSy…',
         instructions: `
-            <strong>✨ 100% GRATIS con cuenta Gmail personal (Sin tarjeta):</strong><br>
+            <strong>✨ 100% GRATIS con cuenta Gmail personal (Sin tarjeta bancaria):</strong><br>
             1. Abre <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio (aistudio.google.com/apikey)</a> con tu correo <b>@gmail.com</b> personal.<br>
             2. Haz clic en <b>"Create API key"</b> → <b>"Create API key in new project"</b>, cópiala y pégala abajo.
         `
     }
 };
 
+let currentStep = 1;
 let selectedMode = 'both';
 let selectedProvider = 'groq';
 let cachedKeys = {
@@ -40,6 +41,17 @@ let cachedKeys = {
 };
 
 // Elementos del DOM
+const welcomeTitle = document.getElementById('welcome-title');
+const welcomeSubtitle = document.getElementById('welcome-subtitle');
+const stepIndicator1 = document.getElementById('step-indicator-1');
+const stepIndicator2 = document.getElementById('step-indicator-2');
+const stepperLine = document.getElementById('stepper-line');
+
+const stepPane1 = document.getElementById('step-pane-1');
+const stepPane2 = document.getElementById('step-pane-2');
+const btnNextStep = document.getElementById('btn-next-step');
+const btnPrevStep = document.getElementById('btn-prev-step');
+
 const modeCards = document.querySelectorAll('.mode-card');
 const providerTabs = document.querySelectorAll('.provider-tab');
 const providerInstructions = document.getElementById('provider-instructions');
@@ -50,7 +62,47 @@ const testBtn = document.getElementById('welcome-test-btn');
 const testStatus = document.getElementById('welcome-test-status');
 const finishBtn = document.getElementById('btn-finish-onboarding');
 
-// 1. Manejo de Selección de Modo (Paso 1)
+// 1. Control de Pasos (Wizard UX)
+function setStep(step) {
+    currentStep = step;
+    if (step === 1) {
+        stepPane1.style.display = 'block';
+        stepPane2.style.display = 'none';
+
+        stepIndicator1.className = 'stepper-step active';
+        stepIndicator2.className = 'stepper-step';
+        stepperLine.classList.remove('completed');
+
+        welcomeTitle.textContent = 'Configura tu Asistente IA en 2 sencillos pasos';
+        welcomeSubtitle.textContent = 'Elige qué funciones deseas activar en tu WhatsApp Web.';
+    } else {
+        stepPane1.style.display = 'none';
+        stepPane2.style.display = 'block';
+
+        stepIndicator1.className = 'stepper-step completed';
+        stepIndicator2.className = 'stepper-step active';
+        stepperLine.classList.add('completed');
+
+        welcomeTitle.textContent = 'Conecta tu API Key gratuita';
+        welcomeSubtitle.textContent = 'Genera tu clave en 30 segundos sin costo y pégala aquí para activar la IA.';
+
+        // Enfocar el input para mayor comodidad
+        setTimeout(() => {
+            apiKeyInput.focus();
+        }, 50);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+btnNextStep.addEventListener('click', () => {
+    setStep(2);
+});
+
+btnPrevStep.addEventListener('click', () => {
+    setStep(1);
+});
+
+// 2. Manejo de Selección de Modo (Paso 1)
 modeCards.forEach((card) => {
     card.addEventListener('click', () => {
         modeCards.forEach((c) => {
@@ -61,9 +113,16 @@ modeCards.forEach((card) => {
         card.setAttribute('aria-checked', 'true');
         selectedMode = card.getAttribute('data-mode') || 'both';
     });
+
+    card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            card.click();
+        }
+    });
 });
 
-// 2. Manejo de Proveedor de IA (Paso 2)
+// 3. Manejo de Proveedor de IA (Paso 2)
 function updateProviderUI(provider) {
     selectedProvider = provider;
     providerTabs.forEach((tab) => {
@@ -112,7 +171,7 @@ toggleKeyBtn.addEventListener('click', () => {
     toggleKeyBtn.innerHTML = keyVisible ? ICONS.eyeSlash : ICONS.eye;
 });
 
-// 3. Probar Conexión
+// 4. Probar Conexión con la API
 function hideTestStatus() {
     testStatus.style.display = 'none';
     testStatus.className = 'test-status';
@@ -148,19 +207,26 @@ testBtn.addEventListener('click', () => {
                 return;
             }
 
-            if (resp && resp.ok) {
+            // Detección robusta de éxito: resp.ok === true O presencia de texto de respuesta sin errores
+            const isSuccess = Boolean(resp && (resp.ok === true || (resp.text && !resp.error)));
+
+            if (isSuccess) {
                 testStatus.className = 'test-status ok';
-                testStatus.innerHTML = `${ICONS.checkCircle}<span>¡Conexión exitosa! Tu API Key de ${PROVIDERS[selectedProvider].name} está funcionando correctamente.</span>`;
+                const modelUsed = resp.usedModel ? ` (Modelo activo: <b>${resp.usedModel}</b>)` : '';
+                testStatus.innerHTML = `${ICONS.checkCircle}<span>¡Conexión exitosa! Tu API Key de ${PROVIDERS[selectedProvider].name} está funcionando correctamente.${modelUsed}</span>`;
             } else {
                 testStatus.className = 'test-status err';
-                const errText = resp && resp.error ? resp.error : 'No se pudo verificar la clave.';
+                let errText = 'No se pudo verificar la clave.';
+                if (resp && resp.error) {
+                    errText = typeof resp.error === 'string' ? resp.error : (resp.error.message || JSON.stringify(resp.error));
+                }
                 testStatus.innerHTML = `${ICONS.xCircle}<span>Error al probar la clave: ${errText}</span>`;
             }
         }
     );
 });
 
-// 4. Finalizar Onboarding y Guardar
+// 5. Finalizar Onboarding y Guardar
 finishBtn.addEventListener('click', () => {
     const rawKey = apiKeyInput.value.trim().replace(/^["']|["']$/g, '');
     cachedKeys[selectedProvider] = rawKey;
@@ -197,7 +263,8 @@ finishBtn.addEventListener('click', () => {
     });
 });
 
-// Inicialización al cargar la página
+// Inicialización
 document.addEventListener('DOMContentLoaded', () => {
     updateProviderUI('groq');
+    setStep(1);
 });

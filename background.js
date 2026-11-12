@@ -644,6 +644,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             request.model,
             request.provider
         ).then((response) => {
+            if (response && response.text && !response.error) {
+                response.ok = true;
+            } else if (response && response.error) {
+                response.ok = false;
+            }
             sendResponse(response);
         });
         return true;
