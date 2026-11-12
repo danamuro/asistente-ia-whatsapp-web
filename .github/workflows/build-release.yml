@@ -25,6 +25,7 @@ jobs:
           node --check uiStuff.js
           node --check contentScript.js
           node --check options/options.js
+          node --check options/welcome.js
           node -e "JSON.parse(require('fs').readFileSync('manifest.json', 'utf8'));"
 
       - name: Crear paquete ZIP de distribución

@@ -594,29 +594,39 @@ async function checkForUpdatesAutomatically() {
 checkForUpdatesAutomatically();
 
 chrome.runtime.onInstalled.addListener((details) => {
-    if (details.reason === 'install') {
-        chrome.storage.local.get(
-            {
-                enableTextAI: true,
-                enableAudioTranscription: true,
-                onboardingCompleted: false
-            },
-            (current) => {
-                chrome.storage.local.set(
-                    {
-                        enableTextAI: current.enableTextAI !== false,
-                        enableAudioTranscription: current.enableAudioTranscription !== false,
-                        onboardingCompleted: Boolean(current.onboardingCompleted)
-                    },
-                    () => {
-                        chrome.tabs.create({
-                            url: chrome.runtime.getURL('options/options.html?onboarding=1')
-                        });
-                    }
-                );
-            }
-        );
+    // NUNCA abrir pantalla de bienvenida al actualizar la extensión
+    if (details.reason !== 'install') {
+        return;
     }
+
+    // Verificar si el usuario ya tenía configuración o ya completó el onboarding
+    chrome.storage.local.get(
+        {
+            apiKey: '',
+            geminiKey: '',
+            groqKey: '',
+            onboardingCompleted: false,
+            enableTextAI: true,
+            enableAudioTranscription: true
+        },
+        (current) => {
+            const hasExistingKey = Boolean(
+                (current.apiKey && current.apiKey.trim()) ||
+                (current.geminiKey && current.geminiKey.trim()) ||
+                (current.groqKey && current.groqKey.trim())
+            );
+
+            // Si ya completó onboarding o ya tiene keys configuradas, no mostrar bienvenida
+            if (current.onboardingCompleted || hasExistingKey) {
+                return;
+            }
+
+            // Primera instalación limpia: abrir pantallita individual de bienvenida
+            chrome.tabs.create({
+                url: chrome.runtime.getURL('options/welcome.html')
+            });
+        }
+    );
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {

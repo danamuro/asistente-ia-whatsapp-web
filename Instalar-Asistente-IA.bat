@@ -113,6 +113,10 @@ echo   2. Haz clic en "Cargar descomprimida" (arriba a la izquierda).
 echo   3. Presiona Ctrl + V en la barra de carpeta (ya esta copiada)
 echo      y pulsa "Seleccionar carpeta".
 echo.
+echo   * NOTA PARA OPERA / OPERA GX:
+echo     Si Opera abrio una pestana vacia por politicas de seguridad,
+echo     simplemente presiona Ctrl + Shift + E para ver Extensiones.
+echo.
 echo   * Si solo estas ACTUALIZANDO una version anterior, unicamente
 echo     pulsa el boton de recargar (flecha circular) en la tarjeta
 echo     de la extension.

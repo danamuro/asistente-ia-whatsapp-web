@@ -66,13 +66,11 @@ const closeAlertButton = document.getElementById('hideHistoryWarningAlert');
 const toggleKeyBtn = document.getElementById('toggle-key-btn');
 const testApiBtn = document.getElementById('test-api-btn');
 const testStatusBox = document.getElementById('test-status');
-const onboardingBanner = document.getElementById('onboarding-banner');
 const toggleAudioTranscription = document.getElementById('toggle-audio-transcription');
 const toggleTextAI = document.getElementById('toggle-text-ai');
 const featuresOffWarning = document.getElementById('features-off-warning');
 const fieldsetTriggerMode = document.getElementById('fieldset-trigger-mode');
 const fieldsetTone = document.getElementById('fieldset-tone');
-const presetModeBtns = document.querySelectorAll('.preset-mode-btn');
 
 function syncFeatureTogglesUI(persistImmediately = false) {
     const audioOn = toggleAudioTranscription ? toggleAudioTranscription.checked : true;
@@ -88,15 +86,6 @@ function syncFeatureTogglesUI(persistImmediately = false) {
         fieldsetTone.classList.toggle('fieldset-dimmed', !textOn);
     }
 
-    presetModeBtns.forEach((btn) => {
-        const mode = btn.getAttribute('data-mode');
-        const isActive =
-            (mode === 'both' && audioOn && textOn) ||
-            (mode === 'audio-only' && audioOn && !textOn) ||
-            (mode === 'text-only' && !audioOn && textOn);
-        btn.classList.toggle('active', isActive);
-    });
-
     if (persistImmediately) {
         chrome.storage.local.set({
             enableAudioTranscription: audioOn,
@@ -111,23 +100,6 @@ if (toggleAudioTranscription) {
 if (toggleTextAI) {
     toggleTextAI.addEventListener('change', () => syncFeatureTogglesUI(true));
 }
-
-presetModeBtns.forEach((btn) => {
-    btn.addEventListener('click', () => {
-        const mode = btn.getAttribute('data-mode');
-        if (mode === 'both') {
-            toggleAudioTranscription.checked = true;
-            toggleTextAI.checked = true;
-        } else if (mode === 'audio-only') {
-            toggleAudioTranscription.checked = true;
-            toggleTextAI.checked = false;
-        } else if (mode === 'text-only') {
-            toggleAudioTranscription.checked = false;
-            toggleTextAI.checked = true;
-        }
-        syncFeatureTogglesUI(true);
-    });
-});
 
 // Inicializar icono Phosphor Bold en el botón de mostrar/ocultar contraseña
 toggleKeyBtn.innerHTML = OPT_PH_BOLD.eye;
@@ -311,9 +283,6 @@ function saveOptions(e) {
         enableTextAI: enableTextAI,
         onboardingCompleted: true
     }, () => {
-        if (onboardingBanner) {
-            onboardingBanner.style.display = 'none';
-        }
         const toast = document.getElementById('save-toast');
         toast.style.display = 'block';
         setTimeout(() => {
@@ -357,12 +326,6 @@ function restoreOptions() {
             toggleTextAI.checked = items.enableTextAI !== false;
         }
         syncFeatureTogglesUI(false);
-
-        const params = new URLSearchParams(window.location.search);
-        const isOnboarding = params.get('onboarding') === '1' || !items.onboardingCompleted;
-        if (onboardingBanner) {
-            onboardingBanner.style.display = isOnboarding ? 'block' : 'none';
-        }
 
         document.getElementById('history-count').value = items.historyCount || 10;
         document.getElementById('tone-of-voice').value = items.toneOfVoice;
