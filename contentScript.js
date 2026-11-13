@@ -426,20 +426,25 @@ REGLAS CRÍTICAS DE ROL Y PERSPECTIVA (OBLIGATORIO):
 6. Devuelve ÚNICAMENTE el texto final del mensaje para enviar, sin comillas y sin prefijos como "[YO]:" o "Yo:".`;
 }
 
-function triggerEvent() {
+function triggerEvent(attempt = 0) {
     if (!enableTextAI) return;
     if (delayTimer) {
         clearTimeout(delayTimer);
     }
+    // En modo automático se espera más para que WhatsApp termine de pintar el chat
+    const wait = attempt === 0 ? (sendHistory === 'auto' ? 700 : 120) : 700;
     delayTimer = setTimeout(() => {
-        generateReplySuggestion();
-    }, 120);
+        generateReplySuggestion(attempt);
+    }, wait);
 }
 
-async function generateReplySuggestion() {
+async function generateReplySuggestion(attempt = 0) {
     if (!enableTextAI) return;
     const mainNode = document.getElementById('main') || globalMainNode;
-    if (!mainNode || !newFooterParagraph) return;
+    if (!mainNode || !newFooterParagraph) {
+        if (attempt < 6) triggerEvent(attempt + 1);
+        return;
+    }
 
     lastActionWasRewrite = false;
     const { chatHistoryShort, lastIsMine, messageCount, lastMessageText } = parseHtml(mainNode, historyCount);
@@ -448,10 +453,17 @@ async function generateReplySuggestion() {
     const customPromptText = globalCustomPromptInput ? globalCustomPromptInput.value.trim() : '';
 
     if (quickToneValue === 'custom' && !customPromptText) {
+        if (sendHistory === 'auto') {
+            writeStatusHint(CS_PH_BOLD.info, 'Escribe qué deseas responder en el campo de texto para generar la respuesta.');
+        }
         return;
     }
 
     if (messageCount === 0 && quickToneValue !== 'custom') {
+        if (attempt < 6) {
+            triggerEvent(attempt + 1);
+            return;
+        }
         writeStatusHint(CS_PH_BOLD.info, 'No se detectaron mensajes recientes en este chat.');
         return;
     }

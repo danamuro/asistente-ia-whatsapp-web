@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../options/styles.css">
+    <title>Asistente IA para WhatsApp™ Web</title>
+</head>
+<body class="popup">
+    <header class="popup-header">
+        <img src="../icons/icon_32.png" alt="" width="28" height="28" class="logo-img">
+        <div class="popup-title">
+            <strong>Asistente IA</strong>
+            <small>para WhatsApp™ Web</small>
+        </div>
+    </header>
+
+    <div id="popup-key-warning" class="features-warning" style="display:none">
+        <svg class="ph-icon" width="16" height="16" aria-hidden="true"><use href="../icons/phosphor-sprite.svg#ph-warning-circle"/></svg>
+        <span>Falta tu API Key. Configúrala en ajustes.</span>
+    </div>
+
+    <div class="feature-toggle-list">
+        <label class="feature-toggle-card" for="popup-audio">
+            <svg class="ph-icon ph-accent" width="20" height="20" aria-hidden="true"><use href="../icons/phosphor-sprite.svg#ph-microphone"/></svg>
+            <div class="feature-info"><span class="feature-title">Transcripción de audios</span></div>
+            <span class="switch"><input type="checkbox" id="popup-audio"><span class="slider"></span></span>
+        </label>
+        <label class="feature-toggle-card" for="popup-text">
+            <svg class="ph-icon ph-accent" width="20" height="20" aria-hidden="true"><use href="../icons/phosphor-sprite.svg#ph-sparkle"/></svg>
+            <div class="feature-info"><span class="feature-title">Asistente de texto</span></div>
+            <span class="switch"><input type="checkbox" id="popup-text"><span class="slider"></span></span>
+        </label>
+        <label class="feature-toggle-card" for="popup-auto">
+            <svg class="ph-icon ph-accent" width="20" height="20" aria-hidden="true"><use href="../icons/phosphor-sprite.svg#ph-lightning"/></svg>
+            <div class="feature-info"><span class="feature-title">Respuesta automática</span></div>
+            <span class="switch"><input type="checkbox" id="popup-auto"><span class="slider"></span></span>
+        </label>
+    </div>
+
+    <button type="button" id="popup-settings" class="btn-primary-large">
+        <svg class="ph-icon" width="18" height="18" aria-hidden="true"><use href="../icons/phosphor-sprite.svg#ph-gear"/></svg>
+        <span>Ajustes</span>
+        <svg class="ph-icon" width="16" height="16" aria-hidden="true"><use href="../icons/phosphor-sprite.svg#ph-arrow-square-out"/></svg>
+    </button>
+    <script src="popup.js"></script>
+</body>
+</html>

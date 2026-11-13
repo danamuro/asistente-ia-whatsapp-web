@@ -5,7 +5,7 @@
    "description": "Respuestas inteligentes con IA (Groq y Gemini Gratis), selector de tono y mejora/traducción para WhatsApp™ Web.",
    "action": {
       "default_title": "Asistente IA para WhatsApp™ Web",
-      "default_popup": "options/options.html"
+      "default_popup": "popup/popup.html"
    },
    "background": {
       "service_worker": "background.js"

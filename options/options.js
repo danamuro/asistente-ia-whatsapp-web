@@ -1,15 +1,17 @@
 'use strict';
 
-// Iconos vectoriales Phosphor Bold (256x256, stroke-width="24", round caps/joins)
+// Iconos Phosphor Bold desde el sprite compartido del proyecto
+const phIcon = (id, size = 16, extraClass = '') =>
+    `<svg class="ph-icon${extraClass ? ' ' + extraClass : ''}" width="${size}" height="${size}" aria-hidden="true"><use href="../icons/phosphor-sprite.svg#${id}"/></svg>`;
 const OPT_PH_BOLD = {
-    eye: `<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"><path d="M128,56C48,56,16,128,16,128s32,72,112,72,112-72,112-72S208,56,128,56Z"/><circle cx="128" cy="128" r="36"/></svg>`,
-    eyeSlash: `<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"><line x1="48" y1="40" x2="208" y2="216"/><path d="M154.9,157.6A36,36,0,0,1,101.1,98.4"/><path d="M74,68.6C33.2,89.2,16,128,16,128s32,72,112,72a118.1,118.1,0,0,0,54-12.6"/><path d="M208.6,169.1C230.4,149.6,240,128,240,128s-32-72-112-72a126,126,0,0,0-20.1,1.6"/></svg>`,
-    lightning: `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;"><polygon points="160 16 144 96 208 120 96 240 112 160 48 136 160 16"/></svg>`,
-    sparkle: `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:4px;"><path d="M138.7,175.5l-19.2,52.1a8,8,0,0,1-15,0L85.3,175.5,33.2,156.3a8,8,0,0,1,0-15L85.3,122.1l19.2-52.1a8,8,0,0,1,15,0l19.2,52.1,52.1,19.2a8,8,0,0,1,0,15Z"/></svg>`,
-    checkCircle: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:5px;"><circle cx="128" cy="128" r="96"/><polyline points="88 136 112 160 168 104"/></svg>`,
-    warningCircle: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:5px;"><circle cx="128" cy="128" r="96"/><line x1="128" y1="80" x2="128" y2="136"/><circle cx="128" cy="172" r="6" fill="currentColor"/></svg>`,
-    xCircle: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:5px;"><circle cx="128" cy="128" r="96"/><line x1="160" y1="96" x2="96" y2="160"/><line x1="160" y1="160" x2="96" y2="96"/></svg>`,
-    spinner: `<svg class="opt-spinner" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px; margin-right:5px;"><path d="M168,40.7a96,96,0,1,1-80,0"/></svg>`
+    eye: phIcon('ph-eye', 17),
+    eyeSlash: phIcon('ph-eye-slash', 17),
+    lightning: phIcon('ph-lightning', 15, 'ph-inline'),
+    sparkle: phIcon('ph-sparkle', 15, 'ph-inline'),
+    checkCircle: phIcon('ph-check-circle', 16, 'ph-inline'),
+    warningCircle: phIcon('ph-warning-circle', 16, 'ph-inline'),
+    xCircle: phIcon('ph-x-circle', 16, 'ph-inline'),
+    spinner: phIcon('ph-spinner', 16, 'opt-spinner ph-inline')
 };
 
 const PROVIDER_CONFIG = {
